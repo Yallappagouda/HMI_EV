@@ -4,74 +4,35 @@ import { motion } from 'framer-motion';
 import { Wifi, Smartphone, AlertTriangle, Zap } from 'lucide-react';
 import { speak, triggerHaptic, beep } from '../utils';
 import { useCognitive } from '../hooks/useCognitiveEngine';
+import { useUserFlow } from '../context/UserFlowContext';
 
 const MainAuthentication = () => {
     const navigate = useNavigate();
+    const { isFirstTimeUser } = useUserFlow();
     const { incrementError } = useCognitive();
     const [phone, setPhone] = useState('');
     const [error, setError] = useState('');
-    const [isVoiceActive, setIsVoiceActive] = useState(false);
-    const recognitionRef = useRef(null);
-    const isListeningRef = useRef(false);
 
-    // ✅ PRODUCTION-STABLE Voice Recognition Logic
-    // ✅ FIXED: Voice starts after first user interaction (browser-safe)
     useEffect(() => {
-        const SpeechRecognition =
-            window.SpeechRecognition || window.webkitSpeechRecognition;
-
-        if (!SpeechRecognition) {
-            console.error("Speech Recognition not supported.");
-            return;
+        if (isFirstTimeUser === undefined) {
+            navigate('/');
         }
+    }, [isFirstTimeUser, navigate]);
 
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = false;
-        recognition.lang = "en-US";
-        recognition.maxAlternatives = 1;
+    const [isVoiceActive, setIsVoiceActive] = useState(false);
 
-        recognitionRef.current = recognition;
-
+    // Voice digit capture handled by global engine in App.jsx
+    useEffect(() => {
         let accumulatedDigits = "";
-        let started = false;
 
-        const startRecognition = async () => {
-            if (started) return;
-            started = true;
-
-            try {
-                await navigator.mediaDevices.getUserMedia({ audio: true });
-
-                isListeningRef.current = true;
-                recognition.start();
-            } catch (err) {
-                console.error("Mic permission denied:", err);
-            }
-        };
-
-        // 🔥 Start only after first user click anywhere on screen
-        const enableVoiceOnInteraction = () => {
-            startRecognition();
-            window.removeEventListener("click", enableVoiceOnInteraction);
-        };
-
-        window.addEventListener("click", enableVoiceOnInteraction);
-
-        recognition.onstart = () => {
-            setIsVoiceActive(true);
-            console.log("🎤 Voice started");
-        };
-
-        recognition.onresult = (event) => {
-            const transcript = event.results[0][0].transcript;
-
+        const handleVoiceDigits = (e) => {
+            const transcript = e.detail || "";
             let digits = transcript.replace(/\D/g, "");
             if (!digits) return;
 
+            setIsVoiceActive(true);
             accumulatedDigits += digits;
 
-            // Keep only last 10 digits
             if (accumulatedDigits.length > 10) {
                 accumulatedDigits = accumulatedDigits.slice(-10);
             }
@@ -80,35 +41,20 @@ const MainAuthentication = () => {
             setPhone(cleanNumber);
 
             if (cleanNumber.length === 10) {
-                recognition.stop();
-                isListeningRef.current = false;
                 setIsVoiceActive(false);
                 speak("Number captured.");
             }
         };
 
-        recognition.onend = () => {
-            setIsVoiceActive(false);
-
-            if (isListeningRef.current && accumulatedDigits.length < 10) {
-                setTimeout(() => {
-                    try {
-                        recognition.start();
-                    } catch (err) { }
-                }, 300);
-            }
-        };
-
-        recognition.onerror = (event) => {
-            console.error("Speech error:", event.error);
-        };
+        window.addEventListener('voltcharge-voice-digits', handleVoiceDigits);
 
         return () => {
-            window.removeEventListener("click", enableVoiceOnInteraction);
-            try {
-                recognition.stop();
-            } catch (e) { }
+            window.removeEventListener('voltcharge-voice-digits', handleVoiceDigits);
         };
+    }, []);
+
+    useEffect(() => {
+        speak("Please tap your NFC card or authenticate using your mobile number.");
     }, []);
 
     const validatePhone = (value) => {

@@ -5,18 +5,44 @@ export const triggerHaptic = (pattern) => {
   }
 };
 
-export const speak = (text) => {
-  if ('speechSynthesis' in window) {
+export const stopSpeaking = () => {
+  if (window.speechSynthesis) {
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
-    // Attempt to select a "Google US English" or similar generic voice
-    const voices = window.speechSynthesis.getVoices();
-    const preferred = voices.find(v => v.lang === 'en-US');
-    if (preferred) utterance.voice = preferred;
-    window.speechSynthesis.speak(utterance);
   }
+};
+
+export const speakIndustrial = (text, recognitionRef) => {
+  if (!window.speechSynthesis) return;
+
+  // 🔴 Turn OFF mic before speaking
+  if (recognitionRef?.current) {
+    try {
+      recognitionRef.current.onend = null; // prevent auto-restart
+      recognitionRef.current.stop();
+      console.log("🎤 Mic OFF (System speaking)");
+    } catch (e) { }
+  }
+
+  window.speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 0.95;
+  utterance.pitch = 1;
+  utterance.volume = 1;
+
+  utterance.onend = () => {
+    console.log("🔊 System finished speaking");
+
+    // 🟢 Turn mic back ON
+    if (recognitionRef?.current) {
+      try {
+        recognitionRef.current.start();
+        console.log("🎤 Mic ON (Listening again)");
+      } catch (e) { }
+    }
+  };
+
+  window.speechSynthesis.speak(utterance);
 };
 
 export const beep = (duration = 500) => {

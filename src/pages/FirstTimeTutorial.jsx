@@ -2,96 +2,51 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Zap } from 'lucide-react';
 import { speak, triggerHaptic } from '../utils';
+import { useUserFlow } from '../context/UserFlowContext';
 
 const FirstTimeTutorial = () => {
     console.log("Rendering FirstTimeTutorial from src/pages/FirstTimeTutorial.jsx");
 
     const navigate = useNavigate();
+    const { isFirstTimeUser } = useUserFlow();
     const [videoEnded, setVideoEnded] = useState(false);
+
     const [videoError, setVideoError] = useState(false);
     const videoRef = useRef(null);
+
     useEffect(() => {
         speak(
             "Welcome to EV Charging Station. Please watch this short tutorial to understand how to charge your vehicle. You can say Play to start the video."
         );
 
-        const SpeechRecognition =
-            window.SpeechRecognition || window.webkitSpeechRecognition;
-
-        if (!SpeechRecognition) return;
-
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = false;
-        recognition.lang = "en-US";
-
-        let isManuallyStopped = false;
-
-        const startRecognition = async () => {
-            try {
-                await navigator.mediaDevices.getUserMedia({ audio: true });
-                recognition.start();
-            } catch (err) {
-                console.error("Microphone permission denied:", err);
+        // Voice commands handled by global engine in App.jsx
+        const handleVoiceAction = (e) => {
+            const action = e.detail;
+            if (action === 'play' && videoRef.current) {
+                videoRef.current.play();
             }
-        };
-
-        recognition.onresult = (event) => {
-            const transcript =
-                event.results[event.results.length - 1][0].transcript
-                    .toLowerCase()
-                    .trim();
-
-            console.log("Voice Command:", transcript);
-
-            // 🎬 PLAY COMMAND
-            if (transcript.includes("play")) {
-                if (videoRef.current) {
-                    videoRef.current.play();
-                }
+            if (action === 'stop' && videoRef.current) {
+                videoRef.current.pause();
             }
-
-            // ⏸ STOP COMMAND
-            if (transcript.includes("stop")) {
-                if (videoRef.current) {
-                    videoRef.current.pause();
-                }
-            }
-
-            // ▶ CONTINUE COMMAND (existing logic preserved)
-            if (transcript.includes("continue") && videoEnded) {
+            if (action === 'continue' && videoEnded) {
                 handleContinue();
             }
         };
 
-        recognition.onend = () => {
-            // Auto-restart for continuous listening
-            if (!isManuallyStopped) {
-                setTimeout(() => {
-                    try {
-                        recognition.start();
-                    } catch (err) { }
-                }, 300);
-            }
-        };
-
-        recognition.onerror = (event) => {
-            console.error("Speech recognition error:", event.error);
-        };
-
-        startRecognition();
+        window.addEventListener('voltcharge-voice-action', handleVoiceAction);
 
         return () => {
-            isManuallyStopped = true;
-            try {
-                recognition.stop();
-            } catch (e) { }
+            window.removeEventListener('voltcharge-voice-action', handleVoiceAction);
         };
     }, [videoEnded]);
 
     const handleContinue = () => {
         triggerHaptic(50);
-        navigate('/first-time-authentication');
+        if (isFirstTimeUser) {
+            navigate('/first-time-authentication');
+        } else {
+            navigate('/authentication');
+        }
     };
 
     return (

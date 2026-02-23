@@ -244,11 +244,11 @@ export const useCognitive = () => {
       interactionSpeed: 'normal',
       cognitiveLoadScore: 0,
       currentMode: 'STANDARD',
-      incrementError: () => {},
-      incrementHelp: () => {},
-      registerInteraction: () => {},
-      registerTaskCompletion: () => {},
-      logSessionOutcome: () => {},
+      incrementError: () => { },
+      incrementHelp: () => { },
+      registerInteraction: () => { },
+      registerTaskCompletion: () => { },
+      logSessionOutcome: () => { },
     };
   }
 

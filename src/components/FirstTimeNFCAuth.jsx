@@ -1,13 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Wifi, AlertTriangle } from 'lucide-react';
 import { speak, triggerHaptic, beep } from '../utils';
 import { useCognitive } from '../hooks/useCognitiveEngine';
+import { useUserFlow } from '../context/UserFlowContext';
 
 const FirstTimeNFCAuth = () => {
     const navigate = useNavigate();
+    const { isFirstTimeUser } = useUserFlow();
     const { incrementError } = useCognitive();
     const [error, setError] = useState('');
+
+    useEffect(() => {
+        if (isFirstTimeUser === undefined || isFirstTimeUser === false) {
+            navigate('/');
+        }
+        speak('Please tap your NFC card to authenticate.');
+    }, [isFirstTimeUser, navigate]);
 
     const handleNfcTap = () => {
         try {
