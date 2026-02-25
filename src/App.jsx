@@ -125,6 +125,7 @@ const HomeScreen = ({ onNext, decideUserMode, userMode }) => {
   const [voiceError, setVoiceError] = useState('');
   const hasTriggeredRef = useRef(false);
   const isMountedRef = useRef(true);
+  const countdownActiveRef = useRef(false);
 
   // Inactivity timeout logic - Stable version
   useEffect(() => {
@@ -147,21 +148,26 @@ const HomeScreen = ({ onNext, decideUserMode, userMode }) => {
   // Handle stage changes safely (isolated side effects)
   useEffect(() => {
     if (inactiveStage === 1) {
-      speak("Please select Yes or No.", recognitionRef);
+      speak("Please select Yes or No.");
     }
 
     if (inactiveStage === 2 && !hasTriggeredRef.current) {
       hasTriggeredRef.current = true;
-      speak("Starting guided experience.", recognitionRef);
-      setIsFirstTimeUser(true);
-      setGuidedMode(true);
-      navigate("/guided-video");
+      countdownActiveRef.current = true;
+      speak("Switching to guided mode in 5… 4… 3… 2… 1", () => {
+        if (!countdownActiveRef.current) return;
+        setIsFirstTimeUser(true);
+        setGuidedMode(true);
+        navigate("/guided-video");
+        countdownActiveRef.current = false;
+      });
     }
   }, [inactiveStage, navigate, setIsFirstTimeUser, setGuidedMode]);
 
 
 
   const handleYes = useCallback(() => {
+    countdownActiveRef.current = false;
     if (hasTriggeredRef.current) return;
     hasTriggeredRef.current = true;
     decideUserMode && decideUserMode(true, 0);
@@ -173,6 +179,7 @@ const HomeScreen = ({ onNext, decideUserMode, userMode }) => {
   }, [decideUserMode, onNext, setIsFirstTimeUser, setGuidedMode]);
 
   const handleNo = useCallback(() => {
+    countdownActiveRef.current = false;
     if (hasTriggeredRef.current) return;
     hasTriggeredRef.current = true;
     decideUserMode && decideUserMode(false, 0);
@@ -187,7 +194,7 @@ const HomeScreen = ({ onNext, decideUserMode, userMode }) => {
 
   useEffect(() => {
     isMountedRef.current = true;
-    speak("Welcome to EV Charging Station. Is this your first time charging an EV?", recognitionRef);
+    speak("Welcome to EV Charging Station. Is this your first time charging an EV?");
 
     const handleVoiceAction = (e) => {
       const action = e.detail;
@@ -309,7 +316,7 @@ const HomeScreen = ({ onNext, decideUserMode, userMode }) => {
 const ChargingModeScreen = ({ onFastCharge, onNormalCharge, userMode }) => {
   const handleFastCharge = () => {
     triggerHaptic(50);
-    speak("Fast charging selected.", recognitionRef);
+    speak("Fast charging selected.");
     // notify any listeners (research tracking)
     try { window.dispatchEvent(new CustomEvent('voltcharge-mode-selected', { detail: { mode: 'fast', time: Date.now() } })); } catch (e) { void e; }
     onFastCharge();
@@ -317,13 +324,13 @@ const ChargingModeScreen = ({ onFastCharge, onNormalCharge, userMode }) => {
 
   const handleNormalCharge = () => {
     triggerHaptic(50);
-    speak("Normal charging selected.", recognitionRef);
+    speak("Normal charging selected.");
     try { window.dispatchEvent(new CustomEvent('voltcharge-mode-selected', { detail: { mode: 'normal', time: Date.now() } })); } catch (e) { void e; }
     onNormalCharge();
   };
 
   useEffect(() => {
-    speak("Select your charging mode. Fast charge for quick charging or normal charge for balanced speed and battery health.", recognitionRef);
+    speak("Select your charging mode. Fast charge for quick charging or normal charge for balanced speed and battery health.");
   }, []);
 
   const modeClasses = userMode === 'ELDERLY' ? 'text-2xl high-contrast' : (userMode === 'GUIDED' ? 'text-xl' : (userMode === 'EXPERT' ? 'text-sm compact-layout' : ''));
@@ -417,12 +424,12 @@ const CableConnectionScreen = ({ onNext, userMode }) => {
   const handleContinue = useCallback(() => {
     triggerHaptic(50);
     beep(300);
-    speak('Charging started.', recognitionRef);
+    speak('Charging started.');
     setTimeout(() => onNext(), 400);
   }, [onNext]);
 
   useEffect(() => {
-    speak(userMode === 'GUIDED' ? 'Step 2 of 3: Connect your charging cable.' : 'Please connect your charging cable.', recognitionRef);
+    speak(userMode === 'GUIDED' ? 'Step 2 of 3: Connect your charging cable.' : 'Please connect your charging cable.');
     beep(500);
 
     // Simulate cable detection after 2 seconds
@@ -458,7 +465,7 @@ const CableConnectionScreen = ({ onNext, userMode }) => {
 
   useEffect(() => {
     if (connected && !hasPromptedCable) {
-      speak("Cable connected. Say Continue to start charging.", recognitionRef);
+      speak("Cable connected. Say Continue to start charging.");
       setHasPromptedCable(true);
       setIsCableListening(true);
     }
@@ -468,7 +475,7 @@ const CableConnectionScreen = ({ onNext, userMode }) => {
     setChecking(true);
     setError('');
     setConnected(false);
-    speak('Checking for cable connection...', recognitionRef);
+    speak('Checking for cable connection...');
 
     setTimeout(() => {
       setChecking(false);
@@ -667,13 +674,13 @@ const ChargingScreen = ({ onComplete, onError, mode = 'normal', userMode = 'STAN
         setIsPaused(false);
         setIsListening80(false);
         recordInteraction('continue_80_voice');
-        speak("Continuing to full charge.", recognitionRef);
+        speak("Continuing to full charge.");
         return;
       } else if (cmd.includes('stop')) {
         recordInteraction('stop_80_voice');
         handleSessionComplete('voice_stop_80');
         setIsListening80(false);
-        speak("Charging stopped at 80 percent.", recognitionRef);
+        speak("Charging stopped at 80 percent.");
         return;
       }
     }
@@ -682,13 +689,13 @@ const ChargingScreen = ({ onComplete, onError, mode = 'normal', userMode = 'STAN
       // start charging
       setIsPaused(false);
       pausedRef.current = false;
-      speak('Charging started.', recognitionRef);
+      speak('Charging started.');
       triggerHapticWithFeedback([60]);
     } else if (cmd.includes('stop charging') || cmd.includes('stop')) {
       // stop charging
       completedRef.current = true;
       if (intervalRef.current) clearInterval(intervalRef.current);
-      speak('Charging stopped.', recognitionRef);
+      speak('Charging stopped.');
       triggerHapticWithFeedback([120, 60, 120]);
       beep(400);
       setTimeout(() => handleSessionComplete('voice_stop'), 500);
@@ -704,20 +711,20 @@ const ChargingScreen = ({ onComplete, onError, mode = 'normal', userMode = 'STAN
     const newState = !childLockEnabled;
     setChildLockEnabled(newState);
     triggerHaptic([80, 40, 80]);
-    speak(newState ? "Child lock enabled." : "Child lock disabled.", recognitionRef);
+    speak(newState ? "Child lock enabled." : "Child lock disabled.");
   };
 
   const resetOverVoltageWarning = () => {
     setOverVoltageWarning(false);
     setIsPaused(false);
     pausedRef.current = false;
-    speak("Voltage stabilized. Resuming charging.", recognitionRef);
+    speak("Voltage stabilized. Resuming charging.");
     triggerHaptic(50);
   };
 
   function handleEmergencyStop() {
     if (childLockEnabled) {
-      speak("Child lock enabled. Emergency stop disabled.", recognitionRef);
+      speak("Child lock enabled. Emergency stop disabled.");
       triggerHaptic(50);
       return;
     }
@@ -730,7 +737,7 @@ const ChargingScreen = ({ onComplete, onError, mode = 'normal', userMode = 'STAN
     completedRef.current = true;
     if (intervalRef.current) clearInterval(intervalRef.current);
     triggerHaptic([100, 50, 100, 50, 100]);
-    speak("Charging stopped for safety.", recognitionRef);
+    speak("Charging stopped for safety.");
     beep(400);
     setShowEmergencyConfirm(false);
     setTimeout(() => handleSessionComplete('emergency_stop'), 500);
@@ -756,7 +763,7 @@ const ChargingScreen = ({ onComplete, onError, mode = 'normal', userMode = 'STAN
     // Initial announcement for charging screen
     if (!hasAnnouncedStart) {
       setHasAnnouncedStart(true);
-      speak(mode === 'fast' ? "Fast charging initiated." : "Normal charging initiated.", recognitionRef);
+      speak(mode === 'fast' ? "Fast charging initiated." : "Normal charging initiated.");
     }
 
     const handleVoiceAction = (e) => {
@@ -804,7 +811,7 @@ const ChargingScreen = ({ onComplete, onError, mode = 'normal', userMode = 'STAN
           completedRef.current = true;
           clearInterval(intervalRef.current);
           beep(2000);
-          speak("Charging completed", recognitionRef);
+          speak("Charging completed");
           triggerHapticWithFeedback([150, 50, 150]);
           setTimeout(() => handleSessionComplete('complete'), 500);
           return 100;
@@ -817,7 +824,7 @@ const ChargingScreen = ({ onComplete, onError, mode = 'normal', userMode = 'STAN
           pausedRef.current = true;
           setShow80Modal(true);
           triggerHapticWithFeedback([100, 50, 100]);
-          speak("Battery has reached 80 percent. Say Continue to charge to 100 percent, or say Stop charging.", recognitionRef);
+          speak("Battery has reached 80 percent. Say Continue to charge to 100 percent, or say Stop charging.");
           setIsListening80(true);
           // Removed recognitionRef.current.start() as useGlobalVoiceEngine handles continuous listening
           return 80;
@@ -864,6 +871,23 @@ const ChargingScreen = ({ onComplete, onError, mode = 'normal', userMode = 'STAN
     }
     setCognitiveMode(prev => (prev !== newMode ? newMode : prev));
   }, [progress]);
+
+  const prevCognitiveRef = useRef(cognitiveMode);
+  useEffect(() => {
+    if (prevCognitiveRef.current !== cognitiveMode) {
+      let phrase = '';
+      if (cognitiveMode === 'advanced') phrase = "Advanced cognitive mode activated.";
+      else if (cognitiveMode === 'normal') phrase = "Normal cognitive mode activated.";
+      else if (cognitiveMode === 'simple') phrase = "Simple cognitive mode activated.";
+      const announce = () => speak(phrase);
+      if (window.speechSynthesis && window.speechSynthesis.speaking) {
+        setTimeout(announce, 800);
+      } else {
+        announce();
+      }
+      prevCognitiveRef.current = cognitiveMode;
+    }
+  }, [cognitiveMode]);
 
   // derive cognitiveMetrics from tracked states (metrics still tracked for research, but UI driven by cognitiveMode)
   useEffect(() => {
@@ -1162,7 +1186,7 @@ const ErrorScreen = ({ onRetry, onHome }) => {
   const { incrementHelp } = useCognitive();
   useEffect(() => {
     triggerHaptic([100, 50, 100, 50, 100, 50, 100]);
-    speak("Connection error. Connector not detected.", recognitionRef);
+    speak("Connection error. Connector not detected.");
     beep(300);
   }, []);
 
@@ -1226,7 +1250,7 @@ const ErrorScreen = ({ onRetry, onHome }) => {
 const NetworkErrorScreen = ({ onRetry, onHome }) => {
   useEffect(() => {
     triggerHaptic(50);
-    speak("Network unavailable. Please wait or try again.", recognitionRef);
+    speak("Network unavailable. Please wait or try again.");
     beep(400);
   }, []);
 
@@ -1280,7 +1304,7 @@ const NetworkErrorScreen = ({ onRetry, onHome }) => {
 const OverheatErrorScreen = ({ onRetry, onHome }) => {
   useEffect(() => {
     triggerHaptic([150, 100, 150]);
-    speak("Battery temperature high. Charging paused for safety.", recognitionRef);
+    speak("Battery temperature high. Charging paused for safety.");
     beep(350);
   }, []);
 
@@ -1333,7 +1357,7 @@ const OverheatErrorScreen = ({ onRetry, onHome }) => {
 const PaymentErrorScreen = ({ onRetry, onHome }) => {
   useEffect(() => {
     triggerHaptic([100, 50, 100, 50, 100]);
-    speak("Payment failed. Try another payment method.", recognitionRef);
+    speak("Payment failed. Try another payment method.");
     beep(380);
   }, []);
 
@@ -1387,7 +1411,7 @@ const PaymentErrorScreen = ({ onRetry, onHome }) => {
 const ChargingErrorScreen = ({ onRetry, onHome }) => {
   useEffect(() => {
     triggerHaptic([100, 50, 100, 50, 200]);
-    speak("Charging interrupted. Power disconnected.", recognitionRef);
+    speak("Charging interrupted. Power disconnected.");
     beep(500);
   }, []);
 
@@ -1440,7 +1464,7 @@ const ChargingErrorScreen = ({ onRetry, onHome }) => {
 
 // 6. PAYMENT / COMPLETE
 const PaymentScreen = ({ onHome, userMode }) => {
-  useEffect(() => { speak("Charging completed successfully. Receipt sent.", recognitionRef); }, []);
+  useEffect(() => { speak("Charging completed successfully. Receipt sent."); }, []);
 
   const downloadReceipt = () => {
     const now = new Date();
@@ -1454,7 +1478,7 @@ const PaymentScreen = ({ onHome, userMode }) => {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    speak('Receipt downloaded.', recognitionRef);
+    speak('Receipt downloaded.');
     triggerHaptic([80, 40]);
   };
 
@@ -1602,12 +1626,29 @@ export default function App() {
   const [mobileNumber, setMobileNumber] = useState('');
   const voice = useVoiceCommands();
   const prevScreenRef = useRef(null);
+  const authAnnouncedRef = useRef(false);
 
   // --- STOP SPEECH ON ROUTE CHANGE ---
   useEffect(() => {
     stopSpeaking();
   }, [location.pathname]);
 
+  // --- AUTH SUCCESS ANNOUNCEMENT ON TRANSITION TO CABLE CONNECT ---
+  useEffect(() => {
+    const prev = prevScreenRef.current;
+    if (location.pathname === '/cable-connect' && (prev === '/authentication' || prev === '/first-time-authentication')) {
+      if (!authAnnouncedRef.current) {
+        const announce = () => speak("Authentication successful.");
+        if (window.speechSynthesis && window.speechSynthesis.speaking) {
+          setTimeout(announce, 800);
+        } else {
+          announce();
+        }
+        authAnnouncedRef.current = true;
+      }
+    }
+    prevScreenRef.current = location.pathname;
+  }, [location.pathname]);
   // --- UNLOCK AUDIO FOR VOICE-TRIGGERED VIDEO PLAY ---
   useEffect(() => {
     const unlockAudio = () => {
@@ -1621,6 +1662,8 @@ export default function App() {
   const recognitionRef = useRef(null);
   const hasStartedRef = useRef(false);
   const commandHandlerRef = useRef(null);
+  const micPausedRef = useRef(false);
+  const systemSpeakingRef = useRef(false);
 
   // --- CENTRAL COMMAND HANDLER ---
   const handleGlobalVoiceCommand = useCallback((command) => {
@@ -1658,7 +1701,11 @@ export default function App() {
       case "/first-time-authentication":
         window.dispatchEvent(new CustomEvent('voltcharge-voice-digits', { detail: command }));
         if (command.includes("authenticate")) {
-          navigate("/cable-connect");
+          speak("Authentication successful.", () => {
+            setTimeout(() => {
+              navigate("/cable-connect");
+            }, 300);
+          });
           return;
         }
         break;
@@ -1711,6 +1758,16 @@ export default function App() {
     } catch (e) {
       console.warn("Start prevented:", e);
     }
+  }, []);
+  useEffect(() => {
+    const onSpeakStart = () => { systemSpeakingRef.current = true; };
+    const onSpeakEnd = () => { systemSpeakingRef.current = false; };
+    window.addEventListener("voltcharge-speaking-start", onSpeakStart);
+    window.addEventListener("voltcharge-speaking-end", onSpeakEnd);
+    return () => {
+      window.removeEventListener("voltcharge-speaking-start", onSpeakStart);
+      window.removeEventListener("voltcharge-speaking-end", onSpeakEnd);
+    };
   }, []);
 
   // --- SAFE RESTART (delayed, prevents abort loop) ---
@@ -1768,10 +1825,16 @@ export default function App() {
 
     recognition.onend = () => {
       console.log("Recognition ended");
-
-      // restart only if already started before
-      if (hasStartedRef.current) {
-        safeRestart();
+      if (!micPausedRef.current) {
+        try {
+          recognition.start();
+          hasStartedRef.current = true;
+          console.log("Recognition restarted automatically");
+        } catch (e) {
+          console.log("Recognition restart blocked");
+        }
+      } else {
+        console.log("Recognition not restarted (mic paused intentionally)");
       }
     };
 
@@ -1785,6 +1848,32 @@ export default function App() {
   useEffect(() => {
     safeStart();
   }, [safeStart]);
+
+  // --- GLOBAL MIC CONTROL (event-driven) ---
+  useEffect(() => {
+    const pauseMic = () => {
+  micPausedRef.current = true;
+  const rec = recognitionRef.current;
+  if (rec) {
+    try {
+      hasStartedRef.current = false;
+      rec.stop();
+      console.log("Mic paused via event");
+    } catch (e) { void e; }
+  }
+};
+    const resumeMic = () => {
+      micPausedRef.current = false;
+      console.log("Mic resume requested via event");
+      safeStart();
+    };
+    window.addEventListener('voltcharge-pause-mic', pauseMic);
+    window.addEventListener('voltcharge-resume-mic', resumeMic);
+    return () => {
+      window.removeEventListener('voltcharge-pause-mic', pauseMic);
+      window.removeEventListener('voltcharge-resume-mic', resumeMic);
+    };
+  }, [safeRestart]);
 
   // Recognition runs continuously. No start/stop on route change.
 
@@ -1862,7 +1951,7 @@ export default function App() {
                   />
                 } />
 
-                <Route path="/guided-video" element={<FirstTimeTutorial />} />
+                <Route path="/guided-video" element={<FirstTimeTutorial commandHandlerRef={commandHandlerRef} />} />
                 <Route path="/help" element={<ErrorDashboard />} />
 
                 <Route path="/first-time-authentication" element={

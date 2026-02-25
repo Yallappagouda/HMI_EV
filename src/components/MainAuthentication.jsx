@@ -12,6 +12,8 @@ const MainAuthentication = () => {
     const { incrementError } = useCognitive();
     const [phone, setPhone] = useState('');
     const [error, setError] = useState('');
+    const hasSpokenRef = useRef(false);
+    const instructionSpokenRef = useRef(false);
 
     useEffect(() => {
         if (isFirstTimeUser === undefined) {
@@ -57,6 +59,16 @@ const MainAuthentication = () => {
         speak("Please tap your NFC card or authenticate using your mobile number.");
     }, []);
 
+    useEffect(() => {
+        if (isFirstTimeUser === null || isFirstTimeUser === undefined) return;
+        if (isFirstTimeUser === false && !instructionSpokenRef.current) {
+            instructionSpokenRef.current = true;
+            setTimeout(() => {
+                speak("After entering the mobile number, say authenticate or click on authenticate to move to cable connection.");
+            }, 500);
+        }
+    }, [isFirstTimeUser]);
+
     const validatePhone = (value) => {
         return /^(\+?\d{1,3})?\d{10}$/.test(value.replace(/\s+/g, ''));
     };
@@ -68,15 +80,25 @@ const MainAuthentication = () => {
             incrementError();
             return;
         }
-        speak('Number verified. Connecting...');
-        navigate('/cable-connect');
+        if (hasSpokenRef.current) return;
+        hasSpokenRef.current = true;
+        speak('Authentication successful.', () => {
+            setTimeout(() => {
+                navigate('/cable-connect');
+            }, 300);
+        });
     };
 
     const handleNfcTap = () => {
         triggerHaptic(50);
         beep(400);
-        speak('Card recognized. Connecting...');
-        navigate('/cable-connect');
+        if (hasSpokenRef.current) return;
+        hasSpokenRef.current = true;
+        speak('Authentication successful.', () => {
+            setTimeout(() => {
+                navigate('/cable-connect');
+            }, 300);
+        });
     };
 
     return (

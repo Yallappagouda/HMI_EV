@@ -4,48 +4,88 @@ import { AlertTriangle, Zap } from 'lucide-react';
 import { speak, triggerHaptic } from '../utils';
 import { useUserFlow } from '../context/UserFlowContext';
 
-const FirstTimeTutorial = () => {
-    console.log("Rendering FirstTimeTutorial from src/pages/FirstTimeTutorial.jsx");
+const FirstTimeTutorial = ({ commandHandlerRef }) => {
+    console.log("Rendering FirstTimeTutorial");
 
     const navigate = useNavigate();
     const { isFirstTimeUser } = useUserFlow();
+
     const [videoEnded, setVideoEnded] = useState(false);
-
+    const [isPlaying, setIsPlaying] = useState(false);
     const [videoError, setVideoError] = useState(false);
+
     const videoRef = useRef(null);
+    const hasInitializedRef = useRef(false);
 
+    // ✅ Speak once safely (StrictMode safe)
     useEffect(() => {
-        speak(
-            "Welcome to EV Charging Station. Please watch this short tutorial to understand how to charge your vehicle. You can say Play to start the video."
-        );
+        if (hasInitializedRef.current) return;
+        hasInitializedRef.current = true;
 
-        // Voice commands handled by global engine in App.jsx
-        const handleVoiceAction = (e) => {
-            const action = e.detail;
-            if (action === 'play' && videoRef.current) {
-                videoRef.current.play();
+        const timer = setTimeout(() => {
+            speak(
+                "Say play to start the video. Say pause to stop the video. Say continue to proceed to authentication.",
+                () => {
+                    // Autoplay after speech
+                    if (videoRef.current) {
+                        videoRef.current.muted = true; // autoplay safe
+                        videoRef.current.play()
+                            .then(() => {
+                                setIsPlaying(true);
+                                setTimeout(() => {
+                                    if (videoRef.current) {
+                                        videoRef.current.muted = false;
+                                    }
+                                }, 800);
+                            })
+                            .catch(() => {});
+                    }
+                }
+            );
+        }, 800);
+
+        return () => clearTimeout(timer);
+    }, []);
+
+    // ✅ Voice Commands (NO new recognition)
+    useEffect(() => {
+        if (!commandHandlerRef) return;
+
+        commandHandlerRef.current = (transcript) => {
+            const command = (transcript || '').toLowerCase();
+
+            if (command.includes('play')) {
+                videoRef.current?.play().catch(() => {});
+                setIsPlaying(true);
             }
-            if (action === 'stop' && videoRef.current) {
-                videoRef.current.pause();
+
+            if (command.includes('pause')) {
+                videoRef.current?.pause();
+                setIsPlaying(false);
             }
-            if (action === 'continue' && videoEnded) {
+
+            if (command.includes('continue')) {
                 handleContinue();
             }
         };
 
-        window.addEventListener('voltcharge-voice-action', handleVoiceAction);
-
-        return () => {
-            window.removeEventListener('voltcharge-voice-action', handleVoiceAction);
-        };
-    }, [videoEnded]);
+        return () => {};
+    }, [navigate, commandHandlerRef]);
 
     const handleContinue = () => {
         triggerHaptic(50);
+
         if (isFirstTimeUser) {
             navigate('/first-time-authentication');
         } else {
             navigate('/authentication');
+        }
+    };
+
+    const handlePlayOverlay = () => {
+        if (videoRef.current) {
+            videoRef.current.play().catch(() => {});
+            setIsPlaying(true);
         }
     };
 
@@ -71,29 +111,45 @@ const FirstTimeTutorial = () => {
             <div className="w-full max-w-5xl flex flex-col items-center">
 
                 {/* VIDEO SECTION */}
-                <div className="w-full rounded-3xl overflow-hidden border-2 border-volt-cyan/30 shadow-[0_0_40px_rgba(34,211,238,0.2)] bg-black">
+                <div className="w-full rounded-3xl overflow-hidden border-2 border-volt-cyan/30 shadow-[0_0_40px_rgba(34,211,238,0.2)] bg-black relative">
 
                     {!videoError ? (
-                        <video
-                            ref={videoRef}
-                            src="/tutorial.mp4"
-                            controls
-                            playsInline
-                            onEnded={() => {
-                                setVideoEnded(true);
-                                speak(
-                                    "Tutorial complete. You can now press the Continue button or say Continue."
-                                );
-                            }}
-                            onError={() => {
-                                setVideoError(true);
-                                speak(
-                                    "Tutorial Video Unreachable. You can click continue to proceed manually."
-                                );
-                                setVideoEnded(true);
-                            }}
-                            className="w-full h-auto object-contain bg-black"
-                        />
+                        <>
+                            <video
+                                ref={videoRef}
+                                src="/tutorial.mp4"
+                                controls={false}
+                                playsInline
+                                onPlay={() => setIsPlaying(true)}
+                                onPause={() => setIsPlaying(false)}
+                                onEnded={() => {
+                                    setVideoEnded(true);
+                                    speak(
+                                        "Tutorial complete. You can now press the Continue button or say Continue."
+                                    );
+                                }}
+                                onError={() => {
+                                    setVideoError(true);
+                                    setVideoEnded(true);
+                                    speak(
+                                        "Tutorial video unreachable. You can press continue to proceed manually."
+                                    );
+                                }}
+                                className="w-full h-auto object-contain bg-black"
+                            />
+
+                            {!isPlaying && !videoError && (
+                                <button
+                                    onClick={handlePlayOverlay}
+                                    className="absolute inset-0 flex items-center justify-center text-4xl md:text-5xl text-white/90 hover:text-white transition-colors z-10"
+                                    aria-label="Play tutorial video"
+                                >
+                                    <span className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full bg-volt-cyan/20 border border-volt-cyan shadow-[0_0_20px_rgba(34,211,238,0.4)]">
+                                        ▶
+                                    </span>
+                                </button>
+                            )}
+                        </>
                     ) : (
                         <div className="w-full h-64 flex flex-col items-center justify-center p-8 text-center bg-red-950/10">
                             <AlertTriangle size={64} className="text-red-500 mb-6" />
@@ -101,7 +157,7 @@ const FirstTimeTutorial = () => {
                                 Tutorial Video Unreachable
                             </h2>
                             <p className="text-slate-400 max-w-md">
-                                We couldn't load the instruction video, but you can still proceed with the charging setup.
+                                We couldn't load the instruction video, but you can still proceed.
                             </p>
                         </div>
                     )}
