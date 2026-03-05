@@ -9,23 +9,20 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recha
 import { triggerHaptic, speak, beep, stopSpeaking } from './utils';
 import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import useVoiceCommands from './hooks/useVoiceCommands';
-import MicButton from './components/MicButton';
-import { useCognitive } from './hooks/useCognitiveEngine';
-import { useUserFlow } from './context/UserFlowContext';
 import SmsDashboard from './components/SmsDashboard';
 import FirstTimeTutorial from './pages/FirstTimeTutorial';
 import FirstTimeNFCAuth from './components/FirstTimeNFCAuth';
 import MainAuthentication from './components/MainAuthentication';
 import ErrorDashboard from './pages/ErrorDashboard';
-
+import { useUserFlow } from './context/UserFlowContext';
+import MicButton from './components/MicButton';
+import { useCognitive } from './hooks/useCognitiveEngine';
 
 // --- UI COMPONENTS (Defined early to avoid ReferenceErrors) ---
 
 const Card = ({ children, className, onClick, active }) => {
-  const { registerInteraction } = useCognitive();
   const handleClick = (event) => {
     if (onClick) onClick(event);
-    registerInteraction();
   };
   return (
     <div
@@ -38,7 +35,6 @@ const Card = ({ children, className, onClick, active }) => {
 };
 
 const Button = ({ children, onClick, variant = 'primary', className, icon: Icon, disabled = false }) => {
-  const { registerInteraction } = useCognitive();
   const variants = {
     primary: "bg-gradient-to-r from-volt-cyan to-volt-green text-black font-bold shadow-[0_0_20px_rgba(34,211,238,0.4)]",
     danger: "bg-gradient-to-r from-red-800 to-red-600 text-white border border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]",
@@ -49,7 +45,7 @@ const Button = ({ children, onClick, variant = 'primary', className, icon: Icon,
     <motion.button
       whileTap={!disabled ? { scale: 0.95 } : {}}
       whileHover={!disabled ? { scale: 1.02 } : {}}
-      onClick={!disabled ? (e) => { registerInteraction(); if (onClick) onClick(e); } : undefined}
+      onClick={!disabled ? (e) => { if (onClick) onClick(e); } : undefined}
       disabled={disabled}
       className={`w-full py-4 px-6 rounded-xl flex items-center justify-center gap-2 uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed ${variants[variant]} ${className}`}
     >
@@ -86,7 +82,6 @@ class ErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
-
 // --- LEGACY SCREENS REMOVED (Replaced by separate components) ---
 
 // reference to avoid unused-import linter in some environments
@@ -116,7 +111,7 @@ const Header = ({ voice }) => (
 );
 
 // 1. HOME - WELCOME SCREEN WITH FIRST-TIME CHECK
-const HomeScreen = ({ onNext, decideUserMode, userMode }) => {
+const HomeScreen = ({ onNext, decideUserMode, userMode, incrementHelp }) => {
   const navigate = useNavigate();
   const { setIsFirstTimeUser, setGuidedMode } = useUserFlow();
   const { registerInteraction } = useCognitive();
@@ -143,7 +138,7 @@ const HomeScreen = ({ onNext, decideUserMode, userMode }) => {
       clearTimeout(reminderTimer);
       clearTimeout(guidedTimer);
     };
-  }, [inactiveStage]);
+  }, []);
 
   // Handle stage changes safely (isolated side effects)
   useEffect(() => {
@@ -154,13 +149,30 @@ const HomeScreen = ({ onNext, decideUserMode, userMode }) => {
     if (inactiveStage === 2 && !hasTriggeredRef.current) {
       hasTriggeredRef.current = true;
       countdownActiveRef.current = true;
-      speak("Switching to guided mode in 5… 4… 3… 2… 1", () => {
+
+      const proceedToGuided = () => {
         if (!countdownActiveRef.current) return;
+        countdownActiveRef.current = false;
         setIsFirstTimeUser(true);
         setGuidedMode(true);
         navigate("/guided-video");
-        countdownActiveRef.current = false;
-      });
+      };
+
+      // Speak and navigate after speech
+      speak("Switching to guided mode in 5… 4… 3… 2… 1");
+
+      // Use speechSynthesis event to ensure completion
+      if (window.speechSynthesis) {
+        const checkInterval = setInterval(() => {
+          if (!window.speechSynthesis.speaking) {
+            clearInterval(checkInterval);
+            proceedToGuided();
+          }
+        }, 200);
+      } else {
+        // Fallback if speech API fails
+        setTimeout(proceedToGuided, 6000);
+      }
     }
   }, [inactiveStage, navigate, setIsFirstTimeUser, setGuidedMode]);
 
@@ -330,13 +342,13 @@ const ChargingModeScreen = ({ onFastCharge, onNormalCharge, userMode }) => {
   };
 
   useEffect(() => {
-    speak("Select your charging mode. Fast charge for quick charging or normal charge for balanced speed and battery health.");
+    speak("Please select Normal Charging or Fast Charging.");
   }, []);
 
   const modeClasses = userMode === 'ELDERLY' ? 'text-2xl high-contrast' : (userMode === 'GUIDED' ? 'text-xl' : (userMode === 'EXPERT' ? 'text-sm compact-layout' : ''));
   return (
     <div className={`flex flex-col h-full justify-center px-4 max-w-5xl mx-auto w-full ${modeClasses}`}>
-      <div className="mb-16 text-center">s
+      <div className="mb-16 text-center">
         <h2 className="mb-2 font-sans text-4xl font-bold text-glow">Select Charging Mode</h2>
         <p className="text-slate-400">Choose your preferred charging speed</p>
       </div>
@@ -424,7 +436,6 @@ const CableConnectionScreen = ({ onNext, userMode }) => {
   const handleContinue = useCallback(() => {
     triggerHaptic(50);
     beep(300);
-    speak('Charging started.');
     setTimeout(() => onNext(), 400);
   }, [onNext]);
 
@@ -570,36 +581,18 @@ const ChargingScreen = ({ onComplete, onError, mode = 'normal', userMode = 'STAN
   const [childLockEnabled, setChildLockEnabled] = useState(false);
   const [overVoltageWarning, setOverVoltageWarning] = useState(false);
   const [showEmergencyConfirm, setShowEmergencyConfirm] = useState(false);
-  const [hasAnnouncedStart, setHasAnnouncedStart] = useState(false);
   const [isListening80, setIsListening80] = useState(false);
-  const [hasPrompted80, setHasPrompted80] = useState(false);
-  const [cognitiveMode, setCognitiveMode] = useState("advanced");
-
-  // --- Cognitive Load Adaptation Layer (new) ---
-  const [errorCount, setErrorCount] = useState(0);
-  const [interactionCount, setInteractionCount] = useState(0);
-  const [hesitationCount, setHesitationCount] = useState(0);
-  const [cognitiveLoad, setCognitiveLoad] = useState("LOW");
-  const startTimeRef = useRef(null);
-  const lastInteractionRef = useRef(null);
-  const firstActionTimeRef = useRef(null);
-  const [startTime, setStartTime] = useState(null);
-
-  const [cognitiveMetrics, setCognitiveMetrics] = useState({
-    timeToFirstAction: 0,
-    totalTaskTime: 0,
-    interactionCount: 0,
-    errorCount: 0,
-    hesitationCount: 0,
-    cognitiveLoadLevel: 'NORMAL'
-  });
-  const [nowTick, setNowTick] = useState(0);
-  const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [smsMessage, setSmsMessage] = useState("");
+  const [showStopConfirm, setShowStopConfirm] = useState(false);
+  const [awaiting80Decision, setAwaiting80Decision] = useState(false);
+  const [hasAnnouncedFinalVoice, setHasAnnouncedFinalVoice] = useState(false);
 
   const intervalRef = useRef(null);
   const pausedRef = useRef(false);
   const completedRef = useRef(false);
+  const spokeStartRef = useRef(false);
   const spoke80Ref = useRef(false);
+  const spokeStopRef = useRef(false);
   const preBeepRef = useRef(false);
   const nearBeepRef = useRef(false);
   const [micActive, setMicActive] = useState(false);
@@ -628,84 +621,64 @@ const ChargingScreen = ({ onComplete, onError, mode = 'normal', userMode = 'STAN
   }, [addHapticToastCb]);
 
   const handleSessionComplete = useCallback((reason = 'user') => {
-    const sessionData = {
-      totalTime: Date.now() - (startTimeRef.current || Date.now()),
-      errors: errorCount,
-      interactions: interactionCount,
-      hesitationEvents: hesitationCount,
-      cognitiveLoadFinal: cognitiveMetrics.cognitiveLoadLevel || cognitiveLoad,
-      reason,
-      timestamp: Date.now()
-    };
-    try { localStorage.setItem('voltcharge-session', JSON.stringify(sessionData)); } catch (e) { void e; }
-    setHasAnnouncedStart(false);
     setIsListening80(false);
-    setHasPrompted80(false);
     onComplete && onComplete();
-  }, [errorCount, interactionCount, hesitationCount, cognitiveMetrics, cognitiveLoad, onComplete]);
-
-  const recordInteraction = useCallback((label) => {
-    // record first action time
-    if (!firstActionTimeRef.current) {
-      firstActionTimeRef.current = Date.now();
-      const ttf = Math.floor((firstActionTimeRef.current - (startTimeRef.current || Date.now())) / 1000);
-      setCognitiveMetrics(prev => ({ ...prev, timeToFirstAction: ttf }));
-    }
-    void label;
-    setInteractionCount(prev => prev + 1);
-    const now = Date.now();
-    lastInteractionRef.current = now;
-    const actionDelay = now - (startTimeRef.current || now);
-    if (actionDelay > 8000) {
-      setHesitationCount(prev => prev + 1);
-    }
-  }, []);
+  }, [onComplete]);
 
   const handleVoiceCommand = useCallback((text) => {
     const cmd = text.toLowerCase();
     setVoiceMessage(`Heard: "${text}"`);
-    // record voice interaction
-    recordInteraction('voice_command');
 
-    // 80% Modal context
-    if (show80Modal) {
-      if (cmd.includes('continue')) {
-        setShow80Modal(false);
-        setIsPaused(false);
-        setIsListening80(false);
-        recordInteraction('continue_80_voice');
-        speak("Continuing to full charge.");
+    // Modals get priority
+    if (showStopConfirm) {
+      if (cmd.includes('yes') || cmd.includes('stop')) {
+        completedRef.current = true;
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        speak("Charging stopped.");
+        setSmsMessage("SMS sent: Charging completed.");
+        setTimeout(() => handleSessionComplete('user_stop'), 500);
         return;
-      } else if (cmd.includes('stop')) {
-        recordInteraction('stop_80_voice');
-        handleSessionComplete('voice_stop_80');
-        setIsListening80(false);
-        speak("Charging stopped at 80 percent.");
+      } else if (cmd.includes('continue') || cmd.includes('no')) {
+        setShowStopConfirm(false);
+        spokeStopRef.current = false;
+        setIsPaused(false);
+        pausedRef.current = false;
+        speak("Resuming charging.");
         return;
       }
     }
 
-    if (cmd.includes('start charging')) {
-      // start charging
-      setIsPaused(false);
-      pausedRef.current = false;
-      speak('Charging started.');
-      triggerHapticWithFeedback([60]);
-    } else if (cmd.includes('stop charging') || cmd.includes('stop')) {
-      // stop charging
-      completedRef.current = true;
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      speak('Charging stopped.');
-      triggerHapticWithFeedback([120, 60, 120]);
-      beep(400);
-      setTimeout(() => handleSessionComplete('voice_stop'), 500);
-    } else {
-      // wrong voice command counts as an error
-      setErrorCount(prev => prev + 1);
+    if (awaiting80Decision) {
+      if (cmd.includes('continue')) {
+        setShow80Modal(false);
+        setAwaiting80Decision(false);
+        setIsPaused(false);
+        pausedRef.current = false;
+        speak("Continuing to full charge.");
+        return;
+      } else if (cmd.includes('stop')) {
+        setShow80Modal(false);
+        setAwaiting80Decision(false);
+        // showStopConfirm will be handled by the next block
+      }
+    }
+
+    // Generic stop command
+    if (cmd.includes('stop charging') || cmd.includes('stop')) {
+      if (!showStopConfirm) {
+        setShowStopConfirm(true);
+        setIsPaused(true);
+        pausedRef.current = true;
+        if (!spokeStopRef.current) {
+          spokeStopRef.current = true;
+          speak("Are you sure you want to stop charging? Say Yes to stop or say Continue charging to resume.");
+        }
+      }
+      return;
     }
     // brief display
     setTimeout(() => setVoiceMessage(''), 3000);
-  }, [recordInteraction, triggerHapticWithFeedback, handleSessionComplete, show80Modal]);
+  }, [triggerHapticWithFeedback, handleSessionComplete, show80Modal, awaiting80Decision, showStopConfirm]);
 
   const toggleChildLock = () => {
     const newState = !childLockEnabled;
@@ -728,8 +701,6 @@ const ChargingScreen = ({ onComplete, onError, mode = 'normal', userMode = 'STAN
       triggerHaptic(50);
       return;
     }
-    // record an interaction for emergency flow
-    recordInteraction('emergency_request');
     setShowEmergencyConfirm(true);
   }
 
@@ -743,29 +714,41 @@ const ChargingScreen = ({ onComplete, onError, mode = 'normal', userMode = 'STAN
     setTimeout(() => handleSessionComplete('emergency_stop'), 500);
   };
 
-  // Cognitive load score calculation
-  function calculateCognitiveLoad(metrics) {
-    if ((metrics.hesitationCount || 0) >= 2 || (metrics.errorCount || 0) >= 3 || (metrics.timeToFirstAction || 0) > 10) {
-      return 'HIGH';
-    }
-    const interactionThreshold = 3;
-    if ((metrics.errorCount || 0) === 0 && (metrics.hesitationCount || 0) === 0 && (metrics.interactionCount || 0) < interactionThreshold) {
-      return 'LOW';
-    }
-    return 'NORMAL';
-  }
 
   // --- EFFECT HOOKS ---
 
-  // Centralized voice input handler in App.jsx usage follows
+  // Dedicated effect for initial announcement (Senior debugging fix)
+  useEffect(() => {
+    if (spokeStartRef.current) return;
+    spokeStartRef.current = true;
+
+    const startChargingVoice = () => {
+      // 1. Pause microphone to avoid synthesis interference
+      window.dispatchEvent(new Event("voltcharge-pause-mic"));
+
+      // 2. Small delay ensures recognition processes the pause before TTS starts
+      setTimeout(() => {
+        const text = "Charging started. Your vehicle is now charging.";
+        speak(text, () => {
+          // 3. Resume microphone automatically AFTER speech finishes
+          window.dispatchEvent(new Event("voltcharge-resume-mic"));
+        });
+        setSmsMessage("SMS sent: Charging started.");
+      }, 500);
+    };
+
+    // Ensure speechSynthesis voices are loaded (critical for reliable playback)
+    if (window.speechSynthesis.getVoices().length > 0) {
+      startChargingVoice();
+    } else {
+      window.speechSynthesis.onvoiceschanged = () => {
+        startChargingVoice();
+        window.speechSynthesis.onvoiceschanged = null;
+      };
+    }
+  }, []);
 
   useEffect(() => {
-    // Initial announcement for charging screen
-    if (!hasAnnouncedStart) {
-      setHasAnnouncedStart(true);
-      speak(mode === 'fast' ? "Fast charging initiated." : "Normal charging initiated.");
-    }
-
     const handleVoiceAction = (e) => {
       handleVoiceCommand(e.detail);
     };
@@ -774,7 +757,7 @@ const ChargingScreen = ({ onComplete, onError, mode = 'normal', userMode = 'STAN
     return () => {
       window.removeEventListener('voltcharge-voice-action', handleVoiceAction);
     };
-  }, [mode, hasAnnouncedStart, handleVoiceCommand]);
+  }, [handleVoiceCommand]);
 
   // keep pausedRef in sync with isPaused state
   useEffect(() => { pausedRef.current = isPaused; }, [isPaused]);
@@ -811,22 +794,30 @@ const ChargingScreen = ({ onComplete, onError, mode = 'normal', userMode = 'STAN
           completedRef.current = true;
           clearInterval(intervalRef.current);
           beep(2000);
-          speak("Charging completed");
+          setSmsMessage("SMS sent: Charging completed.");
+          //speak("Charging completed"); // Task says "Charging stopped. Please unplug the cable." should be spoken before payment.
           triggerHapticWithFeedback([150, 50, 150]);
-          setTimeout(() => handleSessionComplete('complete'), 500);
+
+          if (!hasAnnouncedFinalVoice) {
+            setHasAnnouncedFinalVoice(true);
+            speak("Charging stopped. Please unplug the cable.", () => {
+              setTimeout(() => handleSessionComplete('complete'), 1000);
+            });
+          }
           return 100;
         }
 
         // 80% Pause Logic - run once
-        if (newProgress >= 80 && !hasPrompted80) {
-          setHasPrompted80(true);
+        if (newProgress >= 80 && !spoke80Ref.current) {
+          spoke80Ref.current = true;
           setIsPaused(true);
           pausedRef.current = true;
           setShow80Modal(true);
+          setAwaiting80Decision(true);
           triggerHapticWithFeedback([100, 50, 100]);
-          speak("Battery has reached 80 percent. Say Continue to charge to 100 percent, or say Stop charging.");
+          speak("Battery has reached 80 percent. Say Continue to charge to 100 percent or say Stop charging.");
+          setSmsMessage("SMS sent: Charging 80% complete.");
           setIsListening80(true);
-          // Removed recognitionRef.current.start() as useGlobalVoiceEngine handles continuous listening
           return 80;
         }
 
@@ -844,217 +835,135 @@ const ChargingScreen = ({ onComplete, onError, mode = 'normal', userMode = 'STAN
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [hasAnnouncedStart, handleSessionComplete, triggerHapticWithFeedback, hasPrompted80, mode]); // Added mode to dependencies
+  }, [handleSessionComplete, triggerHapticWithFeedback]);
 
-  // Idle-based hesitation tracker
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const idleTime = Date.now() - (lastInteractionRef.current || (startTimeRef.current || Date.now()));
-      if (idleTime > 8000) {
-        setHesitationCount(prev => prev + 1);
-      }
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // --- Cognitive Mode Auto-Switch (Battery Driven) ---
-  useEffect(() => {
-    if (progress == null) return;
-    let newMode;
-    if (progress <= 30) {
-      newMode = "advanced";
-    } else if (progress <= 70) {
-      newMode = "normal";
-    } else {
-      newMode = "simple";
-    }
-    setCognitiveMode(prev => (prev !== newMode ? newMode : prev));
-  }, [progress]);
-
-  const prevCognitiveRef = useRef(cognitiveMode);
-  useEffect(() => {
-    if (prevCognitiveRef.current !== cognitiveMode) {
-      let phrase = '';
-      if (cognitiveMode === 'advanced') phrase = "Advanced cognitive mode activated.";
-      else if (cognitiveMode === 'normal') phrase = "Normal cognitive mode activated.";
-      else if (cognitiveMode === 'simple') phrase = "Simple cognitive mode activated.";
-      const announce = () => speak(phrase);
-      if (window.speechSynthesis && window.speechSynthesis.speaking) {
-        setTimeout(announce, 800);
-      } else {
-        announce();
-      }
-      prevCognitiveRef.current = cognitiveMode;
-    }
-  }, [cognitiveMode]);
-
-  // derive cognitiveMetrics from tracked states (metrics still tracked for research, but UI driven by cognitiveMode)
-  useEffect(() => {
-    const totalTime = startTimeRef.current ? Math.floor((Date.now() - startTimeRef.current) / 1000) : 0;
-    const metrics = {
-      timeToFirstAction: cognitiveMetrics.timeToFirstAction,
-      totalTaskTime: totalTime,
-      interactionCount,
-      errorCount,
-      hesitationCount
-    };
-    const level = calculateCognitiveLoad(metrics);
-    setTimeout(() => setCognitiveMetrics({ ...metrics, cognitiveLoadLevel: level }), 0);
-    setTimeout(() => setCognitiveLoad(level === 'LOW' ? 'LOW' : (level === 'HIGH' ? 'HIGH' : 'LOW')), 0);
-  }, [interactionCount, errorCount, hesitationCount, cognitiveMetrics.timeToFirstAction]);
-
-
-  // Listen for external error events (e.g. invalid phone input from AuthScreen)
-  useEffect(() => {
-    const onInvalidPhone = () => setErrorCount(prev => prev + 1);
-    const onModeSelected = () => {
-      setInteractionCount(prev => prev + 1);
-      lastInteractionRef.current = Date.now();
-    };
-    const onStart = () => {
-      setInteractionCount(prev => prev + 1);
-      lastInteractionRef.current = Date.now();
-    };
-    // Removed 'voltcharge-voice-cmd' listener as useGlobalVoiceEngine handles it
-    window.addEventListener('voltcharge-invalid-phone', onInvalidPhone);
-    window.addEventListener('voltcharge-mode-selected', onModeSelected);
-    window.addEventListener('voltcharge-start', onStart);
-    return () => {
-      window.removeEventListener('voltcharge-invalid-phone', onInvalidPhone);
-      window.removeEventListener('voltcharge-mode-selected', onModeSelected);
-      window.removeEventListener('voltcharge-start', onStart);
-    };
-  }, []); // handleVoiceCommand removed from dependencies
-
-  // Admin metrics shortcut: Shift + A
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.shiftKey && (e.key === 'A' || e.key === 'a')) {
-        setShowAdminPanel(prev => !prev);
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
 
   return (
-    <div className="relative flex flex-col items-center justify-center w-full h-full max-w-4xl mx-auto">
-      {/* Mock SMS Dashboard for First Time Users */}
-      {isFirstTime && (
-        <div className="fixed top-24 right-8 z-40 hidden xl:block">
-          <SmsDashboard batteryLevel={progress} />
+    <div className="relative flex gap-6 items-start justify-center w-full h-full max-w-7xl mx-auto overflow-visible px-4 pt-24 py-8">
+      {/* LEFT SIDE SMS DASHBOARD */}
+      <SmsDashboard batteryLevel={progress} smsMessage={smsMessage} />
+
+      {/* Main Charging UI Content */}
+      <div className="flex-1 min-w-[500px] flex flex-col items-center relative">
+
+        {/* MODE INDICATOR - TOP */}
+        <div className={`absolute top-24 left-0 right-0 mx-auto w-fit px-6 py-2 rounded-full border-2 font-bold uppercase tracking-wider text-sm flex items-center gap-2 ${mode === 'fast'
+          ? 'border-cyan-400 bg-cyan-400/10 text-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.3)]'
+          : 'border-green-500 bg-green-500/10 text-green-500 shadow-[0_0_20px_rgba(16,185,129,0.3)]'
+          }`}>
+          <Zap size={14} />
+          {mode === 'fast' ? 'FAST CHARGE MODE' : 'NORMAL CHARGE MODE'}
         </div>
-      )}
 
-      {/* MODE INDICATOR - TOP */}
-      <div className={`absolute top-24 left-0 right-0 mx-auto w-fit px-6 py-2 rounded-full border-2 font-bold uppercase tracking-wider text-sm flex items-center gap-2 ${mode === 'fast'
-        ? 'border-cyan-400 bg-cyan-400/10 text-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.3)]'
-        : 'border-green-500 bg-green-500/10 text-green-500 shadow-[0_0_20px_rgba(16,185,129,0.3)]'
-        }`}>
-        <Zap size={14} />
-        {mode === 'fast' ? 'FAST CHARGE MODE' : 'NORMAL CHARGE MODE'}
-        <span className={`ml-4 text-xs ${userMode === 'ELDERLY' ? 'text-white' : 'text-slate-400'}`}>Cognitive Mode: {cognitiveMode.toUpperCase()}</span>
-      </div>
+        {/* EMERGENCY STOP CONFIRMATION */}
+        <AnimatePresence>
+          {showEmergencyConfirm && (
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md"
+            >
+              <Card className="text-center border-red-600 w-96">
+                <h2 className="mb-4 text-2xl font-bold text-red-500">⚠️ Emergency Stop</h2>
+                <p className="mb-6 text-slate-400">Are you sure you want to stop charging immediately?</p>
+                <div className="space-y-3">
+                  <Button onClick={confirmEmergencyStop} variant="danger">YES, STOP NOW</Button>
+                  <Button onClick={() => { setShowEmergencyConfirm(false); }} variant="secondary">CANCEL</Button>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      {/* EMERGENCY STOP CONFIRMATION */}
-      <AnimatePresence>
-        {showEmergencyConfirm && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md"
-          >
-            <Card className="text-center border-red-600 w-96">
-              <h2 className="mb-4 text-2xl font-bold text-red-500">⚠️ Emergency Stop</h2>
-              <p className="mb-6 text-slate-400">Are you sure you want to stop charging immediately?</p>
-              <div className="space-y-3">
-                <Button onClick={confirmEmergencyStop} variant="danger">YES, STOP NOW</Button>
-                <Button onClick={() => { setShowEmergencyConfirm(false); setErrorCount(prev => prev + 1); recordInteraction('emergency_cancel'); }} variant="secondary">CANCEL</Button>
-              </div>
-            </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
-      {/* Admin Metrics Panel (hidden, Shift+A) */}
-      {showAdminPanel && (
-        <div className="fixed w-64 p-4 text-sm border rounded-lg top-20 right-8 z-60 bg-volt-navy/90 border-white/10">
-          <div className="mb-2 font-bold">Research Metrics</div>
-          <div className="mb-2 text-xs text-slate-400">Total task time: <span className="float-right font-mono">{startTime ? Math.floor((nowTick - startTime) / 1000) : 0}s</span></div>
-          <div className="mb-2 text-xs text-slate-400">Errors: <span className="float-right font-mono">{errorCount}</span></div>
-          <div className="mb-2 text-xs text-slate-400">Interactions: <span className="float-right font-mono">{interactionCount}</span></div>
-          <div className="text-xs text-slate-400">Final Cognitive Load: <span className="float-right font-mono">{cognitiveMetrics.cognitiveLoadLevel}</span></div>
-        </div>
-      )}
+        {/* 80% Modal Overlay */}
+        <AnimatePresence>
+          {show80Modal && (
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md"
+            >
+              <Card className="text-center w-96 border-volt-cyan">
+                <h2 className="mb-4 text-2xl font-bold text-volt-cyan">80% Limit Reached</h2>
+                <p className="mb-6 text-slate-400">Battery has reached 80 percent.</p>
+                <div className="space-y-3">
+                  <Button onClick={() => { setShow80Modal(false); setAwaiting80Decision(false); setIsPaused(false); pausedRef.current = false; speak("Continuing to full charge."); }}>CONTINUE TO 100%</Button>
+                  <Button variant="danger" onClick={() => { setShow80Modal(false); setAwaiting80Decision(false); setShowStopConfirm(true); if (!spokeStopRef.current) { spokeStopRef.current = true; speak("Are you sure you want to stop charging? Say Yes to stop or say Continue charging to resume."); } }}>STOP CHARGING</Button>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      {/* 80% Modal Overlay */}
-      <AnimatePresence>
-        {show80Modal && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md"
-          >
-            <Card className="text-center w-96 border-volt-cyan">
-              <h2 className="mb-4 text-2xl font-bold">80% Limit Reached</h2>
-              <p className="mb-6 text-slate-400">Charging slowed to protect battery health.</p>
-              <div className="space-y-3">
-                <Button onClick={() => { setShow80Modal(false); setIsPaused(false); recordInteraction('continue_80'); }}>CONTINUE TO 100%</Button>
-                <Button variant="danger" onClick={() => { recordInteraction('stop_80_modal'); handleSessionComplete('user_stop'); }}>STOP NOW</Button>
-              </div>
-            </Card>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        {/* Stop Confirmation Modal Overlay */}
+        <AnimatePresence>
+          {showStopConfirm && (
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md"
+            >
+              <Card className="text-center w-96 border-red-500">
+                <h2 className="mb-4 text-2xl font-bold text-red-500">Confirm Stop</h2>
+                <p className="mb-6 text-slate-400">Are you sure you want to stop charging? Say Yes to stop or say Continue charging to resume.</p>
+                <div className="space-y-3">
+                  <Button variant="danger" onClick={() => { completedRef.current = true; if (intervalRef.current) clearInterval(intervalRef.current); speak("Charging stopped."); setSmsMessage("SMS sent: Charging completed."); setTimeout(() => handleSessionComplete('user_stop'), 500); }}>YES, STOP</Button>
+                  <Button variant="secondary" onClick={() => { setShowStopConfirm(false); spokeStopRef.current = false; setIsPaused(false); pausedRef.current = false; speak("Resuming charging."); }}>CONTINUE CHARGING</Button>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      {/* Main Ring - MODE ADAPTIVE */}
-      <div className={`relative flex items-center justify-center ${userMode === 'ELDERLY' ? 'w-96 h-96 mb-12' : (userMode === 'EXPERT' ? 'w-72 h-72 mb-6' : 'w-80 h-80 mb-8')}`}>
-        <svg className="w-full h-full -rotate-90">
-          <circle cx={userMode === 'ELDERLY' ? 192 : (userMode === 'EXPERT' ? 144 : 160)} cy={userMode === 'ELDERLY' ? 192 : (userMode === 'EXPERT' ? 144 : 160)} r={userMode === 'ELDERLY' ? 160 : (userMode === 'EXPERT' ? 120 : 140)} stroke="#0f172a" strokeWidth="12" fill="none" />
-          <circle
-            cx={userMode === 'ELDERLY' ? 192 : (userMode === 'EXPERT' ? 144 : 160)}
-            cy={userMode === 'ELDERLY' ? 192 : (userMode === 'EXPERT' ? 144 : 160)}
-            r={userMode === 'ELDERLY' ? 160 : (userMode === 'EXPERT' ? 120 : 140)}
-            stroke="#22d3ee" strokeWidth="12" fill="none"
-            strokeDasharray={userMode === 'ELDERLY' ? 1005 : (userMode === 'EXPERT' ? 753.98 : 879.6)}
-            strokeDashoffset={userMode === 'ELDERLY' ? 1005 - (1005 * progress) / 100 : (userMode === 'EXPERT' ? 753.98 - (753.98 * progress) / 100 : 879.6 - (879.6 * progress) / 100)}
-            strokeLinecap="round"
-            className="drop-shadow-[0_0_15px_rgba(34,211,238,0.8)] transition-all duration-300"
-          />
-        </svg>
-        <div className="absolute text-center">
-          <span className={`font-bold font-mono block ${userMode === 'ELDERLY' ? 'text-8xl' : (userMode === 'EXPERT' ? 'text-5xl' : 'text-7xl')}`}>{Math.floor(progress)}<span className={userMode === 'ELDERLY' ? 'text-4xl' : 'text-2xl'}>%</span></span>
-          <span className={`uppercase tracking-widest text-volt-cyan ${userMode === 'ELDERLY' ? 'text-lg' : (userMode === 'EXPERT' ? 'text-xs' : 'text-sm')} animate-pulse`}>
-            {userMode === 'GUIDED' ? 'Charging...' : (userMode === 'ELDERLY' ? 'CHARGING IN PROGRESS' : 'Charging')}
-          </span>
-        </div>
-      </div>
-
-      {userMode !== 'EXPERT' && (
-        <div className={`bg-volt-navy/50 px-4 py-2 rounded-full border border-white/5 mb-8 flex items-center gap-2 ${userMode === 'ELDERLY' ? 'px-6 py-3' : ''}`}>
-          <motion.div
-            animate={hapticTriggered ? { scale: [1, 1.3, 0.9, 1.2, 1] } : { scale: 1 }}
-            transition={{ duration: 0.3 }}
-            className={`w-3 h-3 rounded-full shadow-[0_0_10px_rgba(34,211,238,0.6)] ${hapticTriggered ? 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.8)]' : 'bg-volt-cyan'}`}
-          ></motion.div>
-          <span className={`text-slate-400 ${userMode === 'ELDERLY' ? 'text-base' : 'text-xs'}`}>Haptic Feedback Active</span>
-        </div>
-      )}
-
-      {/* Linear Bar */}
-      {userMode !== 'EXPERT' && (
-        <>
-          <div className={`w-full max-w-xl ${userMode === 'ELDERLY' ? 'h-4' : 'h-2'} bg-slate-800 rounded-full ${userMode === 'ELDERLY' ? 'mb-4' : 'mb-2'} overflow-hidden`}>
-            <div className="h-full bg-volt-cyan" style={{ width: `${progress}%` }}></div>
+        {/* Main Ring - MODE ADAPTIVE */}
+        <div className={`relative flex items-center justify-center ${userMode === 'ELDERLY' ? 'w-96 h-96 mb-12' : (userMode === 'EXPERT' ? 'w-72 h-72 mb-6' : 'w-80 h-80 mb-8')}`}>
+          <svg className="w-full h-full -rotate-90">
+            <circle cx={userMode === 'ELDERLY' ? 192 : (userMode === 'EXPERT' ? 144 : 160)} cy={userMode === 'ELDERLY' ? 192 : (userMode === 'EXPERT' ? 144 : 160)} r={userMode === 'ELDERLY' ? 160 : (userMode === 'EXPERT' ? 120 : 140)} stroke="#0f172a" strokeWidth="12" fill="none" />
+            <circle
+              cx={userMode === 'ELDERLY' ? 192 : (userMode === 'EXPERT' ? 144 : 160)}
+              cy={userMode === 'ELDERLY' ? 192 : (userMode === 'EXPERT' ? 144 : 160)}
+              r={userMode === 'ELDERLY' ? 160 : (userMode === 'EXPERT' ? 120 : 140)}
+              stroke="#22d3ee" strokeWidth="12" fill="none"
+              strokeDasharray={userMode === 'ELDERLY' ? 1005 : (userMode === 'EXPERT' ? 753.98 : 879.6)}
+              strokeDashoffset={userMode === 'ELDERLY' ? 1005 - (1005 * progress) / 100 : (userMode === 'EXPERT' ? 753.98 - (753.98 * progress) / 100 : 879.6 - (879.6 * progress) / 100)}
+              strokeLinecap="round"
+              className="drop-shadow-[0_0_15px_rgba(34,211,238,0.8)] transition-all duration-300"
+            />
+          </svg>
+          <div className="absolute text-center">
+            <span className={`font-bold font-mono block ${userMode === 'ELDERLY' ? 'text-8xl' : (userMode === 'EXPERT' ? 'text-5xl' : 'text-7xl')}`}>{Math.floor(progress)}<span className={userMode === 'ELDERLY' ? 'text-4xl' : 'text-2xl'}>%</span></span>
+            <div className={`uppercase tracking-tighter text-[10px] font-bold ${mode === 'fast' ? 'text-cyan-400' : 'text-green-500'} mb-1`}>
+              {mode === 'fast' ? 'Fast Charging Enabled' : 'Normal Charging Enabled'}
+            </div>
+            <span className={`uppercase tracking-widest text-volt-cyan ${userMode === 'ELDERLY' ? 'text-lg' : (userMode === 'EXPERT' ? 'text-xs' : 'text-sm')} animate-pulse`}>
+              {userMode === 'GUIDED' ? 'Charging...' : (userMode === 'ELDERLY' ? 'CHARGING IN PROGRESS' : 'Charging')}
+            </span>
           </div>
-          <div className={`w-full max-w-xl flex justify-between text-slate-500 ${userMode === 'ELDERLY' ? 'text-lg mb-16' : 'text-xs mb-12'}`}>
-            <span>Battery Level</span>
-            <span>{Math.floor(progress)} / 100 kWh</span>
-          </div>
-        </>
-      )}
+        </div>
 
-      {/* Stats Grid - show advanced stats only for EXPERT or when cognitiveMode is advanced */}
-      {(userMode === 'EXPERT' || cognitiveMode === 'advanced') && (
+        {userMode !== 'EXPERT' && (
+          <div className={`bg-volt-navy/50 px-4 py-2 rounded-full border border-white/5 mb-8 flex items-center gap-2 ${userMode === 'ELDERLY' ? 'px-6 py-3' : ''}`}>
+            <motion.div
+              animate={hapticTriggered ? { scale: [1, 1.3, 0.9, 1.2, 1] } : { scale: 1 }}
+              transition={{ duration: 0.3 }}
+              className={`w-3 h-3 rounded-full shadow-[0_0_10px_rgba(34,211,238,0.6)] ${hapticTriggered ? 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.8)]' : 'bg-volt-cyan'}`}
+            ></motion.div>
+            <span className={`text-slate-400 ${userMode === 'ELDERLY' ? 'text-base' : 'text-xs'}`}>Haptic Feedback Active</span>
+          </div>
+        )}
+
+        {/* Linear Bar */}
+        {userMode !== 'EXPERT' && (
+          <>
+            <div className={`w-full max-w-xl ${userMode === 'ELDERLY' ? 'h-4' : 'h-2'} bg-slate-800 rounded-full ${userMode === 'ELDERLY' ? 'mb-4' : 'mb-2'} overflow-hidden`}>
+              <div className="h-full bg-volt-cyan" style={{ width: `${progress}%` }}></div>
+            </div>
+            <div className={`w-full max-w-xl flex justify-between text-slate-500 ${userMode === 'ELDERLY' ? 'text-lg mb-16' : 'text-xs mb-12'}`}>
+              <span>Battery Level</span>
+              <span>{Math.floor(progress)} / 100 kWh</span>
+            </div>
+          </>
+        )}
+
+        {/* Stats Grid */}
         <div className="grid w-full grid-cols-3 gap-4 mb-8">
           <Card className="flex flex-col items-center py-4">
             <Clock size={20} className="mb-2 text-volt-cyan" />
@@ -1072,82 +981,92 @@ const ChargingScreen = ({ onComplete, onError, mode = 'normal', userMode = 'STAN
             <span className="text-[10px] text-slate-500 uppercase">Cost</span>
           </Card>
         </div>
-      )}
 
-      {/* SAFETY FEATURES PANEL */}
-      <div className="w-full max-w-3xl p-6 mb-8 border bg-volt-navy/40 border-white/5 rounded-2xl">
-        <h3 className="mb-4 text-sm font-bold tracking-widest uppercase text-slate-300">Safety Features</h3>
+        {/* SAFETY FEATURES PANEL */}
+        <div className="w-full max-w-3xl p-6 mb-8 border bg-volt-navy/40 border-white/5 rounded-2xl">
+          <h3 className="mb-4 text-sm font-bold tracking-widest uppercase text-slate-300">Safety Features</h3>
 
-        <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-2">
-          {/* Over Voltage Warning Card */}
-          <motion.div
-            className={`p-4 rounded-lg border-2 transition-all ${overVoltageWarning
-              ? 'border-red-600 bg-red-950/30 shadow-[0_0_20px_rgba(220,38,38,0.3)]'
-              : 'border-green-600 bg-green-950/20'
-              }`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-bold">{overVoltageWarning ? '⚠️ Over Voltage' : '✓ Voltage Safe'}</span>
-              <span className={`text-xs font-mono ${overVoltageWarning ? 'text-red-400' : 'text-green-400'}`}>
-                {overVoltageWarning ? '420V' : '400V'}
-              </span>
-            </div>
-            <p className="mb-3 text-xs text-slate-400">
-              {overVoltageWarning ? 'Over voltage detected. Charging paused.' : 'Voltage within safe limits'}
-            </p>
-            {overVoltageWarning && (
-              <Button onClick={resetOverVoltageWarning} variant="secondary" className="py-2 text-xs">
-                Reset
-              </Button>
-            )}
-          </motion.div>
-
-          {/* Child Lock Toggle */}
-          <div className="flex flex-col justify-between p-4 border-2 rounded-lg border-white/10 bg-volt-navy/20">
-            <div>
+          <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-2">
+            {/* Over Voltage Warning Card */}
+            <motion.div
+              className={`p-4 rounded-lg border-2 transition-all ${overVoltageWarning
+                ? 'border-red-600 bg-red-950/30 shadow-[0_0_20px_rgba(220,38,38,0.3)]'
+                : 'border-green-600 bg-green-950/20'
+                }`}>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-bold">Child Lock Mode</span>
-                {childLockEnabled && <Lock size={16} className="text-yellow-500" />}
+                <span className="text-sm font-bold">{overVoltageWarning ? '⚠️ Over Voltage' : '✓ Voltage Safe'}</span>
+                <span className={`text-xs font-mono ${overVoltageWarning ? 'text-red-400' : 'text-green-400'}`}>
+                  {overVoltageWarning ? '420V' : '400V'}
+                </span>
               </div>
               <p className="mb-3 text-xs text-slate-400">
-                {childLockEnabled ? 'Disabled: Stop & Mode buttons' : 'Safety lock for critical controls'}
+                {overVoltageWarning ? 'Over voltage detected. Charging paused.' : 'Voltage within safe limits'}
               </p>
+              {overVoltageWarning && (
+                <Button onClick={resetOverVoltageWarning} variant="secondary" className="py-2 text-xs">
+                  Reset
+                </Button>
+              )}
+            </motion.div>
+
+            {/* Child Lock Toggle */}
+            <div className="flex flex-col justify-between p-4 border-2 rounded-lg border-white/10 bg-volt-navy/20">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-bold">Child Lock Mode</span>
+                  {childLockEnabled && <Lock size={16} className="text-yellow-500" />}
+                </div>
+                <p className="mb-3 text-xs text-slate-400">
+                  {childLockEnabled ? 'Disabled: Stop & Mode buttons' : 'Safety lock for critical controls'}
+                </p>
+              </div>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={toggleChildLock}
+                className={`w-full py-2 px-3 rounded-lg font-bold text-xs uppercase transition-all ${childLockEnabled
+                  ? 'bg-yellow-900/40 border border-yellow-600 text-yellow-400'
+                  : 'bg-slate-700/40 border border-white/10 text-slate-300 hover:bg-slate-700/60'
+                  }`}
+              >
+                {childLockEnabled ? '🔒 UNLOCK' : '🔓 LOCK'}
+              </motion.button>
             </div>
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={toggleChildLock}
-              className={`w-full py-2 px-3 rounded-lg font-bold text-xs uppercase transition-all ${childLockEnabled
-                ? 'bg-yellow-900/40 border border-yellow-600 text-yellow-400'
-                : 'bg-slate-700/40 border border-white/10 text-slate-300 hover:bg-slate-700/60'
-                }`}
-            >
-              {childLockEnabled ? '🔒 UNLOCK' : '🔓 LOCK'}
-            </motion.button>
           </div>
+
+          {/* Emergency Stop Button */}
+          <motion.button
+            whileHover={!childLockEnabled ? { scale: 1.02 } : {}}
+            whileTap={!childLockEnabled ? { scale: 0.98 } : {}}
+            onClick={handleEmergencyStop}
+            disabled={childLockEnabled}
+            className={`w-full py-4 rounded-xl font-bold text-white uppercase tracking-wider transition-all ${childLockEnabled
+              ? 'bg-slate-700/30 border-2 border-slate-600 cursor-not-allowed opacity-50'
+              : 'bg-gradient-to-r from-red-800 to-red-600 border-2 border-red-500 shadow-[0_0_20px_rgba(220,38,38,0.4)] hover:shadow-[0_0_30px_rgba(220,38,38,0.6)]'
+              }`}
+          >
+            🛑 Emergency Stop
+          </motion.button>
         </div>
 
-        {/* Emergency Stop Button */}
-        <motion.button
-          whileHover={!childLockEnabled ? { scale: 1.02 } : {}}
-          whileTap={!childLockEnabled ? { scale: 0.98 } : {}}
-          onClick={handleEmergencyStop}
+        <Button
+          variant="danger"
+          onClick={() => {
+            if (!showStopConfirm) {
+              setShowStopConfirm(true);
+              setIsPaused(true);
+              pausedRef.current = true;
+              if (!spokeStopRef.current) {
+                spokeStopRef.current = true;
+                speak("Are you sure you want to stop charging? Say Yes to stop or say Continue charging to resume.");
+              }
+            }
+          }}
+          className={`w-full max-w-md ${userMode === 'ELDERLY' ? 'py-6 text-3xl' : (userMode === 'GUIDED' ? 'py-6 text-2xl' : 'py-6 text-2xl')}`}
           disabled={childLockEnabled}
-          className={`w-full ${cognitiveMode === 'simple' ? 'py-6 text-2xl' : 'py-4'} rounded-xl font-bold text-white uppercase tracking-wider transition-all ${childLockEnabled
-            ? 'bg-slate-700/30 border-2 border-slate-600 cursor-not-allowed opacity-50'
-            : 'bg-gradient-to-r from-red-800 to-red-600 border-2 border-red-500 shadow-[0_0_20px_rgba(220,38,38,0.4)] hover:shadow-[0_0_30px_rgba(220,38,38,0.6)]'
-            }`}
         >
-          🛑 Emergency Stop
-        </motion.button>
+          {userMode === 'ELDERLY' ? '🛑 STOP' : 'STOP CHARGING'}
+        </Button>
       </div>
-
-      <Button
-        variant="danger"
-        onClick={() => { recordInteraction('stop_button'); handleSessionComplete('user_stop'); }}
-        className={`w-full max-w-md ${userMode === 'ELDERLY' ? 'py-6 text-3xl' : (userMode === 'GUIDED' ? 'py-6 text-2xl' : (cognitiveMode === 'simple' ? 'py-6 text-2xl' : ''))}`}
-        disabled={childLockEnabled}
-      >
-        {userMode === 'ELDERLY' ? '🛑 STOP' : 'STOP CHARGING'}
-      </Button>
 
       {/* Haptic Toast Notifications + Voice Mic */}
       <AnimatePresence>
@@ -1183,7 +1102,6 @@ const ChargingScreen = ({ onComplete, onError, mode = 'normal', userMode = 'STAN
 
 // 5. ERROR SCREEN - CONNECTOR ERROR
 const ErrorScreen = ({ onRetry, onHome }) => {
-  const { incrementHelp } = useCognitive();
   useEffect(() => {
     triggerHaptic([100, 50, 100, 50, 100, 50, 100]);
     speak("Connection error. Connector not detected.");
@@ -1624,9 +1542,14 @@ export default function App() {
   const [chargingMode, setChargingMode] = useState('normal');
   const [userMode, setUserMode] = useState('STANDARD'); // STANDARD | GUIDED | ELDERLY | EXPERT
   const [mobileNumber, setMobileNumber] = useState('');
+  const [showHelpDashboard, setShowHelpDashboard] = useState(false);
   const voice = useVoiceCommands();
   const prevScreenRef = useRef(null);
   const authAnnouncedRef = useRef(false);
+
+  const incrementHelp = () => {
+    setShowHelpDashboard(true);
+  };
 
   // --- STOP SPEECH ON ROUTE CHANGE ---
   useEffect(() => {
@@ -1718,12 +1641,25 @@ export default function App() {
         break;
 
       case "/charging":
-        if (command.includes("stop")) {
-          window.dispatchEvent(new CustomEvent('voltcharge-voice-action', { detail: 'stop' }));
+        if (command.includes("yes") || command.includes("stop")) {
+          window.dispatchEvent(new CustomEvent('voltcharge-voice-action', { detail: command }));
           return;
         }
-        if (command.includes("continue")) {
-          window.dispatchEvent(new CustomEvent('voltcharge-voice-action', { detail: 'continue' }));
+        if (command.includes("continue") || command.includes("no")) {
+          window.dispatchEvent(new CustomEvent('voltcharge-voice-action', { detail: command }));
+          return;
+        }
+        break;
+
+      case "/mode-select":
+        if (command.includes("fast")) {
+          window.dispatchEvent(new CustomEvent('voltcharge-voice-action', { detail: 'fast' }));
+          navigate('/authentication');
+          return;
+        }
+        if (command.includes("normal")) {
+          window.dispatchEvent(new CustomEvent('voltcharge-voice-action', { detail: 'normal' }));
+          navigate('/authentication');
           return;
         }
         break;
@@ -1852,18 +1788,19 @@ export default function App() {
   // --- GLOBAL MIC CONTROL (event-driven) ---
   useEffect(() => {
     const pauseMic = () => {
-  micPausedRef.current = true;
-  const rec = recognitionRef.current;
-  if (rec) {
-    try {
-      hasStartedRef.current = false;
-      rec.stop();
-      console.log("Mic paused via event");
-    } catch (e) { void e; }
-  }
-};
+      micPausedRef.current = true;
+      const rec = recognitionRef.current;
+      if (rec) {
+        try {
+          hasStartedRef.current = false;
+          rec.stop();
+          console.log("Mic paused via event");
+        } catch (e) { void e; }
+      }
+    };
     const resumeMic = () => {
       micPausedRef.current = false;
+      hasStartedRef.current = false; // Force safeStart to actually start
       console.log("Mic resume requested via event");
       safeStart();
     };
@@ -1926,7 +1863,7 @@ export default function App() {
   return (
     <div className="flex flex-col min-h-screen font-sans text-white bg-hexagon">
       <Header voice={voice} />
-      <div className="flex-1 px-4 pt-20 pb-8 overflow-x-hidden overflow-y-auto">
+      <div className="flex-1 px-4 pt-20 pb-8 overflow-visible overflow-y-auto">
         <AnimatePresence mode="wait">
           <ErrorBoundary>
             <motion.div
@@ -1942,12 +1879,13 @@ export default function App() {
                   <HomeScreen
                     onNext={(isFirst) => {
                       setIsFirstTimeUser(isFirst);
-                      navigate(isFirst ? '/guided-video' : '/authentication');
+                      navigate(isFirst ? '/guided-video' : '/mode-select');
                     }}
                     onHistory={() => navigate('/history')}
                     decideUserMode={decideUserMode}
                     voice={voice}
                     userMode={userMode}
+                    incrementHelp={incrementHelp}
                   />
                 } />
 

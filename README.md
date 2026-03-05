@@ -11,275 +11,139 @@ A professional-grade, Cognitive Human-Machine Interface (HMI) for next-generatio
 
 ## 1. Project Overview
 
-The **Cognitive EV Charging HMI System** is an advanced HMI prototype that shifts away from traditional static interfaces toward an intelligent, adaptive ecosystem. By analyzing user interaction speed and patterns, the system dynamically reconfigures its UI/UX to match the user's cognitive profile.
-
-### Core Capabilities:
-- **Adaptive UI**: Real-time layout and density adjustments based on user behavior.
-- **Multimodal Control**: Integrated Voice, NFC, and Touch interaction layers.
-- **Intelligent Authentication**: Secure NFC Tap-and-Go + Phone OTP verification.
-- **Behavioral Detection**: Latency-based user proficiency estimation (First-Time vs. Expert).
-- **Accessibility Optimized**: Specialized modes for elderly users and different cognitive loads.
+The **Cognitive EV Charging HMI System** has been enhanced with multiple accessibility, automation, and smart interaction features to improve usability for both experienced and first-time EV users. By analyzing user interaction speed and patterns, the system dynamically reconfigures its UI/UX to match the user's cognitive profile.
 
 ---
 
-## 2. Problem Statement
+## 2. Key Features (Latest Version)
 
-Public EV charging remains a significant barrier to adoption due to several systemic issues:
-- **Interface Anxiety**: New users often find public chargers confusing and intimidating.
-- **Cognitive Overload**: Too much information on-screen can overwhelm non-technical or elderly users.
-- **Authentication Latency**: Slow or multi-step verification processes frustrate returning users.
-- **Low Accessibility**: Static font sizes and complex navigation patterns hinder inclusivity for elderly drivers.
+### 2.1. Voice Assisted Charging Control
+The system supports **hands-free voice interaction** using browser speech recognition.
+- **Commands**: "Start charging", "Stop charging", "Continue charging", "Yes, stop", "Help".
+- **Voice Feedback**: "Charging started", "Charging stopped", "Cable connected successfully", "Authentication successful".
 
-**Our Solution**: An adaptive machine interface that matches the user's mental model, reducing time-to-charge and increasing user confidence through guided, reactive assistance.
+### 2.2. Guided Mode for First-Time Users
+Automatically activates when no user interaction is detected.
+- **Countdown**: Announces "Guided mode will start in 5...4...3...2...1".
+- **Tutorial**: Plays a tutorial video covering connection, auth, charging, and payment.
 
----
+### 2.3. Real-Time Charging Dashboard
+A premium EV dashboard style showing:
+- Battery charge percentage & progress animation.
+- Energy delivered (kWh) & Cost ($).
+- Charging speed (kW) & **Time remaining**.
 
-## 3. Cognitive User Modes
+### 2.4. Smart Charging Control
+Intelligent management features:
+- **Automatic 80% Limit**: Reaches 80% and asks user to "Continue Charging" or "Stop Charging".
+- **Safety Features**: Child lock and over-voltage protection monitoring.
 
-The system operates in four distinct behavioral modes, automatically selected or manually triggered:
+### 2.5. SMS Notification System
+- Enter mobile number for updates on session start, completion, and final costs.
+- Optimized panel layout to avoid information overlap.
 
-### A) First-Time Users (Guided Flow)
-- **Guided Decision**: Initial prompt to identify the user's experience level.
-- **Tutorial Integration**: AI-generated instructional video with **Manual Play** control.
-- **Voice-Assisted Navigation**: Commands like *"Play"* and *"Continue"* bridge the physical-digital gap.
-- **Simplified NFC**: Single-tap authentication path to reduce confusion.
-- **Hardware Guidance**: Visual and audio cues for connector locking and cable management.
+### 2.6. Audio and Haptic Feedback
+- **Sound Cues**: Reliable beeps for connection, success, start, stop, and errors.
+- **Haptics**: Tactile feedback for critical interactions and progress.
 
-### B) Expert / Returning Users (Fast Flow)
-- **Direct Entry**: Bypasses all tutorials for immediate authentication.
-- **Dual Verification**: Expert-level NFC + Phone Number OTP sequence.
-- **Continuous Voice STT**: High-speed numeric recognition for secondary verification.
-- **Compact UI**: Increased information density for experienced users.
+### 2.7. Error Handling Interface
+- Dedicated UI for "Cable not connected", "Auth failure", "Timeout", and "Interruption".
+- Clear troubleshooting steps and retry options.
 
-### C) Elderly Mode (Accessibility First)
-- **Enhanced Visuals**: 25%+ larger buttons and ultra-high contrast color palettes.
-- **Voice-Dominant**: Reduced reliance on precise touch; system announces every state change.
-- **Minimal Steps**: Combined screens to reduce "panning" cognitive effort.
-
-### D) Normal Users (Standard Flow)
-- **Balanced Interface**: Standard dual authentication and interactive charging dashboard.
-- **Proactive Help**: Tooltips and assistant icons available but not intrusive.
-
----
-
-## 4. System Architecture
-
-The project is architected as a Client-Side Progressive Application:
-
-### Frontend Layer
-- **Framework**: React 19 (Functional components, Hooks API).
-- **State Engine**: Centralized interaction tracking to feed the cognitive engine.
-- **Animations**: Framer Motion for smooth, high-frame-rate transitions.
-- **Speech Engine**: Web Speech API for low-latency Speech-to-Text (STT) and Text-to-Speech (TTS).
-
-
-
-### Directory Structure:
-```text
-voltcharge/
-├── src/
-│   ├── components/        # UI Modules (Authentication, Voice HUD, Dashboard)
-│   ├── pages/             # Core views (Tutorial, Simulation, Receipt)
-│   ├── hooks/             # Behavioral Analysis Engine (useCognitive)
-│   ├── utils.js           # Shared Interaction Helpers (Haptics, Voice)
-│   └── App.jsx            # Main Router and State Orchestrator
-└── public/                # Static Media (Tutorial Videos, Icons)
-```
+### 2.8. Help & Assistance Dashboard
+- Quick access troubleshooting guide, safety instructions, and voice command help.
 
 ---
 
-## 5. Technology Stack
+## 3. Technology Stack
 
 | Layer | Technology | Purpose |
 |-------|------------|---------|
-| **Framework** | React 19 | Component-based UI Architecture |
-| **Interaction** | Web Speech API | Voice recognition and synthesis |
+| **Core** | React 19 / Vite | UI Architecture and lightning-fast dev/build |
+| **Interaction** | Web Speech API | Voice recognition (STT) and synthesis (TTS) |
 | **Animation** | Framer Motion | High-performance UI state transitions |
-| **Styling** | Tailwind CSS | Utility-first responsive design |
-| **Icons** | Lucide React | Professional svg-based visual indicators |
-| **Data Viz** | Recharts | Interactive history and analytics charts |
-| **State** | React Hooks | Behavioral tracking and session management |
-| **DevOps** | Vite | Lightning-fast build and HMR |
+| **Styling** | Tailwind CSS / Lucide | Modern utility-first CSS and professional icons |
+| **State** | React Hooks / Custom Context | Behavioral tracking and user flow management |
 
 ---
 
-## 6. User Flow Diagrams
+## 4. Project Architecture
 
-### First-Time User Flow (Guided)
 ```text
-[START]
-   ↓
-[PROFICIENCY CHECK] (Is First Time? → YES)
-   ↓
-[TUTORIAL VIDEO] (Manual Play or Voice "Play")
-   ↓
-[GUIDED NFC AUTH]
-   ↓
-[CABLE GUIDANCE] (Connector detection)
-   ↓
-[CHARGING DASHBOARD] (0-100% Simulation)
-   ↓
-[SESSION SUMMARY] (Download Receipt)
-   ↓
-[EXIT]
-```
-
-### Expert / Returning User Flow (Fast)
-```text
-[START]
-   ↓
-[DIRECT AUTH] (NFC or Phone OTP)
-   ↓
-[VOICE NUMBER INPUT] (Continuous Listening)
-   ↓
-[DIRECT CHARGING] (Bypass tutorial)
-   ↓
-[AUTO-RECEIPT]
-   ↓
-[EXIT]
+src
+ ├── components         # UI Modules (Authentication, Mic Button, SMS Dashboard)
+ ├── context            # UserFlowContext for global state
+ ├── hooks              # useCognitive behavioral engine
+ ├── pages              # Core screens (Tutorial, NFC Auth, Charging Dashboard)
+ ├── utils.js           # Shared Helpers (Haptics, Voice, Audio Beeps)
+ └── App.jsx            # Main Router and Central Command Handler
 ```
 
 ---
 
-## 7. Voice Command System
+## 5. System Workflow & Flowchart
 
-The system implements a **Continuous Listening Engine** to ensure the HMI is always reactive to the user's presence.
+The charging session follows an intelligent, bifurcated path based on user proficiency.
 
-- **Continuous Mode**: Auto-restarts recognition on silence or error to maintain "hands-free" state.
-- **Command Mapping**: 
-    - `"Play"`: Triggers media element playback.
-    - `"Continue"`: Advances the navigation state.
-    - `"Start Charging"` / `"Stop Charging"`: Controls the simulation engine.
-- **STT Pattern Recognition**: Specialized logic for 10-digit mobile number parsing via voice.
+```mermaid
+flowchart TD
+    A[User Arrives at Charging Station] --> B[Welcome Screen]
+    B --> C{User Interaction?}
+    
+    C -->|No| D[Guided Mode Countdown 5-1]
+    D --> E[Tutorial Video]
+    E --> F
+    
+    C -->|Yes| F[Connect Charging Cable]
+    
+    F --> G[Phone Number / NFC Authentication]
+    G --> H{Valid Credentials?}
+    
+    H -->|No| I[Show Validation Error]
+    I --> G
+    
+    H -->|Yes| J[Start Charging]
+    J --> K[Charging Dashboard]
+    
+    K --> L{Battery at 80%?}
+    L -->|Yes| M[Ask Continue or Stop]
+    
+    M -->|Continue| K
+    M -->|Stop| N[Stop Charging]
+    
+    L -->|No| K
+    
+    N --> O[Payment Screen]
+    O --> P[Send SMS Notification]
+    P --> Q[Session Completed]
+```
 
 ---
 
-## 8. Cognitive Equations & Logic Model
+## 6. Cognitive Logic Model (Proprietary)
 
-The system uses a mathematical approach to determine the optimal HMI state:
-
-### Proficiency Factor ($P$):
+The system calculates a **Proficiency Factor ($P$)**:
 $$P = f(\Delta T, E_{count}, S_{usage})$$
-Where:
-- $\Delta T$: Inter-interaction latency (Time between screen loads and clicks).
-- $E_{count}$: Error frequency during authentication.
-- $S_{usage}$: Historical session count.
-
-### Cognitive Load ($L$):
-$$L \propto \text{Steps} \times \text{UI Complexity}$$
-The optimization goal for the system is to minimize $L$:
-$$\text{Minimize } L \implies \text{Maximize Usability Index } (U)$$
-
-### Usability Index ($U$):
-$$U = \frac{\text{Successful Interactions}}{\text{Total Attempts}}$$
-
-In simple terms, if the user hesitates (>5s) or makes errors, the system increases $U$ by automatically shifting into **Elderly or Guided mode**, reducing the complexity of the interface in real-time.
+Where Inter-interaction latency ($\Delta T$) and Error frequency ($E_{count}$) trigger real-time shifts into **Elderly or Guided mode** to minimize **Cognitive Load ($L$)**.
 
 ---
 
-## 9. Responsiveness Strategy
+## 7. Installation & Deployment
 
-To ensure industrial-level reliability, the HMI employs a multi-tiered responsiveness strategy:
-- **Mobile-First Core**: All interfaces are built on a flexible grid for deployment on various tablet sizes.
-- **Dynamic Scaling**: Font-weights and spacing adjust based on the detected user mode.
-- **Media Optimization**: Video elements use `object-contain` combined with hardware-accelerated rendering.
-- **Feedback Loops**: Every interaction triggers a visual (glow), auditory (beep), and simulated haptic pulse.
-
----
-
-## 10. Guide Video System
-
-- **Hosting**: Stored locally in `/public` to guarantee 0-latency access even with poor network.
-- **Safety Protocol**: Manual play is enforced to ensure the user is paying attention before visuals start.
-- **Recovery UI**: If the video engine fails (unsupported codec/missing file), the system triggers an `AlertTriangle` fallback allowing manual progression.
-
----
-
-## 11. Authentication System
-
-A secure, multi-factor-ready authentication gateway:
-1. **NFC Verification**: Primary hardware-emulated ID check.
-2. **Phone Number OTP**: Secondary security layer for transactions.
-3. **Voice HUD**: A real-time wave-form visualizer appears when the system is listening for the numeric OTP/Mobile input.
-4. **Haptic Confirmation**: Unique vibration patterns for "Verification Success" vs "Access Denied".
-
----
-
-## 12. HMI Improvement Analysis
-
-This project demonstrates several key improvements in Human-Machine Interaction:
-- **Reduces Range Anxiety**: Clearer feedback on time and cost.
-- **Universal Access**: Bridges the digital divide for elderly populations.
-- **Cognitive Mapping**: Adapts the machine's behavior to human psychology rather than forcing the human to learn the machine.
-- **Accelerated Adoption**: Makes public infrastructure approachable for the least tech-savvy users.
-
----
-
-## 13. Installation Steps
-
-### Prerequisites
-- Node.js (v18+)
-- npm / yarn
-
-### Interface Setup (Frontend)
+### Setup
 ```bash
-git clone <repo-url>
-cd voltcharge
+git clone https://github.com/Yallappagouda/HMI_EV_CHARGING
+cd HMI_EV_CHARGING
 npm install
 npm run dev
 ```
 
-
-
----
-
-## 14. Deployment Steps
-
-1. **Environment Config**: Update `.env` with production `API_URL`.
-2. **Optimized Build**:
-   ```bash
-   npm run build
-   ```
-3. **Static Serving**: Deploy the `dist/` folder via Vercel, Netlify, or Nginx.
+### Deployment
+- **Live Prototype**: [ev-charging-rouge.vercel.app](https://ev-charging-rouge.vercel.app/)
 
 ---
 
-## 15. GitHub Push Steps
+## 8. License & Versioning
 
-Follow this workflow for updates:
-```bash
-git add .
-git commit -m "Industry: Final HMI Overhaul and Cognitive Engine Integration"
-git branch -M main
-git push origin main
-```
-
----
-
-## 16. Future Improvements
-
-- **Biometric Integration**: Facial recognition for automatic mode selection.
-- **Smart Recommendations**: Suggesting charging modes based on current grid load.
-- **Machine Learning**: Predictive maintenance alerts for charger hardware.
-- **CarPlay/Android Auto**: Syncing the station HMI with the vehicle's dashboard.
-
----
-
-## 17. License
-
-Distributed under the MIT License. See `LICENSE` for more information.
-
----
-
-## 18. Conclusion
-
-This project represents a next-generation approach to public utility interfaces. By treating the EV charger as a **cognitive partner** rather than a static terminal, we solve the core human-factor issues that hinder the transition to sustainable energy.
-
----
-
-**Original Contributors & Credits**:
-- **VoltCharge HMI Team**: Core architecture and cognitive logic.
-- **UI/UX Design**: Premium dark-mode design system.
-- **Engineering Leads**: Behavioral flow and voice engine integration.
-
-**Version**: 1.2.0  | **Last Updated**: 2026-02-21
+Distributed under the MIT License.
+**Version**: 1.3.0  | **Last Updated**: 2026-03-05
