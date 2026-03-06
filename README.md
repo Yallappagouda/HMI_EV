@@ -1,9 +1,9 @@
 # Cognitive EV Charging HMI System
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![React](https://img.shields.io/badge/React-19-blue.svg)](https://reactjs.org/)
+[![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-20-green.svg)](https://nodejs.org/)
-[![Vite](https://img.shields.io/badge/Vite-7-purple.svg)](https://vitejs.dev/)
+[![Vite](https://img.shields.io/badge/Vite-4-purple.svg)](https://vitejs.dev/)
 
 A professional-grade, Cognitive Human-Machine Interface (HMI) for next-generation EV charging infrastructure. This system leverages adaptive behavioral detection and multimodal interaction to provide a seamless charging experience for all demographics.
 
@@ -15,112 +15,134 @@ The **Cognitive EV Charging HMI System** has been enhanced with multiple accessi
 
 ---
 
-## 2. Key Features (Latest Version)
+## 2. System Architecture Overview
 
-### 2.1. Voice Assisted Charging Control
-The system supports **hands-free voice interaction** using browser speech recognition.
-- **Commands**: "Start charging", "Stop charging", "Continue charging", "Yes, stop", "Help".
-- **Voice Feedback**: "Charging started", "Charging stopped", "Cable connected successfully", "Authentication successful".
-
-### 2.2. Guided Mode for First-Time Users
-Automatically activates when no user interaction is detected.
-- **Countdown**: Announces "Guided mode will start in 5...4...3...2...1".
-- **Tutorial**: Plays a tutorial video covering connection, auth, charging, and payment.
-
-### 2.3. Real-Time Charging Dashboard
-A premium EV dashboard style showing:
-- Battery charge percentage & progress animation.
-- Energy delivered (kWh) & Cost ($).
-- Charging speed (kW) & **Time remaining**.
-
-### 2.4. Smart Charging Control
-Intelligent management features:
-- **Automatic 80% Limit**: Reaches 80% and asks user to "Continue Charging" or "Stop Charging".
-- **Safety Features**: Child lock and over-voltage protection monitoring.
-
-### 2.5. SMS Notification System
-- Enter mobile number for updates on session start, completion, and final costs.
-- Optimized panel layout to avoid information overlap.
-
-### 2.6. Audio and Haptic Feedback
-- **Sound Cues**: Reliable beeps for connection, success, start, stop, and errors.
-- **Haptics**: Tactile feedback for critical interactions and progress.
-
-### 2.7. Error Handling Interface
-- Dedicated UI for "Cable not connected", "Auth failure", "Timeout", and "Interruption".
-- Clear troubleshooting steps and retry options.
-
-### 2.8. Help & Assistance Dashboard
-- Quick access troubleshooting guide, safety instructions, and voice command help.
+The system is built on a **Multimodal Interaction Framework** that separates behavioral logic from UI presentation.
+- **Behavioral Engine**: Monitors user interaction time and errors to calculate proficiency.
+- **Interaction Layer**: Handles simultaneous Voice, Touch, and Visual feedback.
+- **Notification Engine**: Manages asynchronous SMS simulations during the charging lifecycle.
+- **Safety Layer**: Implements Child Lock and Over-voltage monitoring with immediate UI/Voice response.
 
 ---
 
-## 3. Technology Stack
+## 3. Updated Features List
 
-| Layer | Technology | Purpose |
-|-------|------------|---------|
-| **Core** | React 19 / Vite | UI Architecture and lightning-fast dev/build |
-| **Interaction** | Web Speech API | Voice recognition (STT) and synthesis (TTS) |
-| **Animation** | Framer Motion | High-performance UI state transitions |
-| **Styling** | Tailwind CSS / Lucide | Modern utility-first CSS and professional icons |
-| **State** | React Hooks / Custom Context | Behavioral tracking and user flow management |
+### 3.1. Advanced Multimodal Interaction
+- **Voice-Controlled Interface**: Full hands-free operation using Web Speech API (STT/TTS).
+- **Gesture & Touch**: Optimized tap targets and haptic feedback.
+- **Visual Guidance**: Real-time progress bars, animated hexagonal backgrounds, and high-contrast modes.
+
+### 3.2. Adaptive User Modes
+- **Guided Mode**: For first-time users. Includes an automated tutorial video and simplified dashboard (Power details hidden to reduce cognitive load).
+- **Expert Mode**: For returning users. Direct access to Fast Charging (150 kW) and Normal Charging (50 kW) with detailed metrics.
+- **Elderly/Accessibility Mode**: Automatically activated for slower interaction speeds, featuring larger text and enhanced spacing.
+
+### 3.3. Lifecycle Simulation
+- **Authentication**: simulated NFC/Card verification and mobile number validation.
+- **Charging Dynamics**: Real-time simulation of power delivery, battery percentage, cost accumulation, and time estimation.
+- **SMS Dashboard**: Integrated simulation of charging updates (Started, 80% complete, Finished) without interrupting the main dashboard UI.
+
+### 3.4. Safety and Error Management
+- **Intelligent 80% Limit**: Automatically prompts the user to "Continue" or "Stop" at the 80% charging threshold.
+- **Overheat & Voltage Protection**: simulated safety triggers with dedicated error screens and troubleshooting steps.
+- **Haptic & Audio Cues**: Tactile and audible confirmation for critical system states.
 
 ---
 
-## 4. Project Architecture
+## 4. User Flow
+
+The application follows a logical, cognitive-aware path:
+
+1. **Home**: User selects proficiency level (First-time or Returning).
+2. **Guided Path**: Tutorial Video → NFC/Mobile Authentication → Charging Dashboard.
+3. **Expert Path**: Charge Mode Selection (Fast/Normal) → Authentication → Charging Dashboard.
+4. **Charging**: Real-time monitoring → 80% prompt → Completion.
+5. **Payment**: Final summary → Receipt download → Return home.
+
+---
+
+## 5. Multimodal Interaction Design
+
+The HMI is designed to provide redundant feedback to ensure accessibility:
+- **Visual**: Framer Motion animations for smooth transitions and high-glow elements for visibility.
+- **Audio**: System voice instructions and notification beeps.
+- **Tactile**: Haptic feedback for interactions like "Stop Charging" or successful authentication.
+- **Text**: Context-aware SMS notifications simulated on a dedicated dashboard.
+
+---
+
+## 6. Voice Command System
+
+The system implements a **Global Voice Recognition** strategy powered by the Web Speech API.
+
+| Command | Action |
+|---------|--------|
+| "Start Charging" | Navigates to mode selection from home screen |
+| "Stop Charging" | Triggers the stop confirmation popup |
+| "Yes" / "No" | Confirms or cancels first-time path and stop actions |
+| "Continue" | Navigates to the next screen (Video -> Auth -> Dashboard) |
+| "Fast" / "Normal" | Selects the charging mode |
+| "Go Back" | Navigates to the previous screen |
+
+The system uses **Speech Synthesis (TTS)** to provide clear instructions, ensuring the microphone pauses while the system is speaking to prevent self-triggering.
+
+---
+
+## 7. Project Folder Structure
 
 ```text
 src
- ├── components         # UI Modules (Authentication, Mic Button, SMS Dashboard)
- ├── context            # UserFlowContext for global state
- ├── hooks              # useCognitive behavioral engine
- ├── pages              # Core screens (Tutorial, NFC Auth, Charging Dashboard)
- ├── utils.js           # Shared Helpers (Haptics, Voice, Audio Beeps)
- └── App.jsx            # Main Router and Central Command Handler
+ ├── components         # UI Modules (Authentication, Mic Button, SMS Dashboard, Mic Status)
+ ├── context            # UserFlowContext for global state management
+ ├── hooks              # useCognitive behavioral engine & Voice interaction hooks
+ ├── pages              # Core screens (Tutorial Video, NFC Auth, Error Screens, History)
+ ├── utils.js           # Shared Helpers (Haptics, Voice Synthesis, Audio Beeps)
+ ├── App.jsx            # Central Router, Global Voice Handler, and UI State
+ └── main.jsx           # Application entry point
 ```
 
 ---
 
-## 5. System Workflow & Flowchart
+## 8. Updated Flowchart of the Application
 
-The charging session follows an intelligent, bifurcated path based on user proficiency.
-
-```mermaid
-flowchart TD
-    A[User Arrives at Charging Station] --> B[Welcome Screen]
-    B --> C{User Interaction?}
-    
-    C -->|No| D[Guided Mode Countdown 5-1]
-    D --> E[Tutorial Video]
-    E --> F
-    
-    C -->|Yes| F[Connect Charging Cable]
-    
-    F --> G[Phone Number / NFC Authentication]
-    G --> H{Valid Credentials?}
-    
-    H -->|No| I[Show Validation Error]
-    I --> G
-    
-    H -->|Yes| J[Start Charging]
-    J --> K[Charging Dashboard]
-    
-    K --> L{Battery at 80%?}
-    L -->|Yes| M[Ask Continue or Stop]
-    
-    M -->|Continue| K
-    M -->|Stop| N[Stop Charging]
-    
-    L -->|No| K
-    
-    N --> O[Payment Screen]
-    O --> P[Send SMS Notification]
-    P --> Q[Session Completed]
+```text
+Start  
+↓  
+User selects First-Time or Returning User  
+↓  
+Guided Mode → Tutorial Video → Authentication → Charging  
+↓  
+Expert Mode → Select Charging Mode (Fast / Normal) → Authentication → Charging  
+↓  
+Charging Screen → SMS Notifications → Stop Charging  
+↓  
+Payment Screen → Receipt  
 ```
 
 ---
 
-## 6. Cognitive Logic Model (Proprietary)
+## 9. Technology Stack
+
+- **Frontend Core**: [React](https://reactjs.org/) (Version 18+)
+- **Build Tool**: [Vite](https://vitejs.dev/) for ultra-fast development.
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/) for utility-first design.
+- **Animation**: [Framer Motion](https://www.framer.com/motion/) for premium UI transitions.
+- **Voice Interaction**: [Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API) (Recognition & Synthesis).
+- **Routing**: [React Router](https://reactrouter.com/) for SPA navigation.
+- **Icons**: [Lucide React](https://lucide.dev/) for modern iconography.
+
+---
+
+## 10. Deployment Information
+
+The project is optimized for deployment on **Vercel**.
+- **Live URL**: [ev-charging-rouge.vercel.app](https://ev-charging-rouge.vercel.app/)
+- **Version Control**: Git & GitHub for collaborative development.
+- **Continuous Integration**: Vercel's Git integration for automatic preview and production deployments.
+
+---
+
+## 11. Cognitive Logic Model (Proprietary)
 
 The system calculates a **Proficiency Factor ($P$)**:
 $$P = f(\Delta T, E_{count}, S_{usage})$$
@@ -128,7 +150,17 @@ Where Inter-interaction latency ($\Delta T$) and Error frequency ($E_{count}$) t
 
 ---
 
-## 7. Installation & Deployment
+## 12. Future Improvements
+
+- **Neural Interface Integration**: Exploring non-invasive BCI for basic status selection.
+- **Biometric Authentication**: Facial recognition and fingerprint integration for secure sessions.
+- **Live Energy Market Integration**: Dynamic pricing based on real-time grid load.
+- **V2G Simulation**: Vehicle-to-Grid discharging capabilities for grid stabilization.
+- **Multiple Language Support**: Expanding the system synthesis to 10+ languages.
+
+---
+
+## 13. Installation
 
 ### Setup
 ```bash
@@ -138,12 +170,9 @@ npm install
 npm run dev
 ```
 
-### Deployment
-- **Live Prototype**: [ev-charging-rouge.vercel.app](https://ev-charging-rouge.vercel.app/)
-
 ---
 
-## 8. License & Versioning
+## 14. License & Versioning
 
 Distributed under the MIT License.
-**Version**: 1.3.0  | **Last Updated**: 2026-03-05
+**Version**: 1.5.0  | **Last Updated**: 2026-03-06

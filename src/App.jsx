@@ -1692,8 +1692,7 @@ export default function App() {
   // --- SAFE START (no double start) ---
   const safeStart = useCallback(() => {
     const recognition = recognitionRef.current;
-    if (!recognition) return;
-    if (hasStartedRef.current) return;
+    if (!recognition || hasStartedRef.current || micPausedRef.current) return;
 
     try {
       recognition.start();
@@ -1701,6 +1700,7 @@ export default function App() {
       console.log("Global voice recognition STARTED");
     } catch (e) {
       console.warn("Start prevented:", e);
+      hasStartedRef.current = false;
     }
   }, []);
   useEffect(() => {
@@ -1717,14 +1717,17 @@ export default function App() {
   // --- SAFE RESTART (delayed, prevents abort loop) ---
   const safeRestart = useCallback(() => {
     const recognition = recognitionRef.current;
-    if (!recognition) return;
+    if (!recognition || micPausedRef.current) return;
 
     hasStartedRef.current = false;
     setTimeout(() => {
+      if (hasStartedRef.current || micPausedRef.current) return;
       try {
         recognition.start();
         hasStartedRef.current = true;
-      } catch { }
+      } catch {
+        hasStartedRef.current = false;
+      }
     }, 800);
   }, []);
 
@@ -1760,6 +1763,7 @@ export default function App() {
 
     recognition.onerror = (event) => {
       console.warn("Recognition error:", event.error);
+      hasStartedRef.current = false;
 
       // DO NOT restart on 'aborted' — that causes the loop
       if (event.error === "aborted") return;
@@ -1769,6 +1773,7 @@ export default function App() {
 
     recognition.onend = () => {
       console.log("Recognition ended");
+      hasStartedRef.current = false;
       if (!micPausedRef.current) {
         try {
           recognition.start();
@@ -1776,6 +1781,7 @@ export default function App() {
           console.log("Recognition restarted automatically");
         } catch (e) {
           console.log("Recognition restart blocked");
+          hasStartedRef.current = false;
         }
       } else {
         console.log("Recognition not restarted (mic paused intentionally)");

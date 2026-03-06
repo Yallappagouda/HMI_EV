@@ -6,6 +6,7 @@ const digitMap = {
 
 export default function useVoiceCommands() {
   const recognitionRef = useRef(null);
+  const recognitionRunning = useRef(false);
   const [micActive, setMicActive] = useState(false);
 
   function normalizeTranscript(text) {
@@ -23,7 +24,7 @@ export default function useVoiceCommands() {
     return digits;
   }
 
-  function startListening(mode = 'commands', onResult = () => {}) {
+  function startListening(mode = 'commands', onResult = () => { }) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       try { window.dispatchEvent(new CustomEvent('voltcharge-voice-feedback', { detail: 'unsupported' })); } catch (e) { void e; }
@@ -32,7 +33,10 @@ export default function useVoiceCommands() {
 
     // stop previous
     if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch (e) { void e; }
+      try {
+        recognitionRef.current.stop();
+        recognitionRunning.current = false;
+      } catch (e) { void e; }
       recognitionRef.current = null;
     }
 
@@ -54,32 +58,50 @@ export default function useVoiceCommands() {
 
     recognition.onerror = () => {
       setMicActive(false);
+      recognitionRunning.current = false;
       try { window.dispatchEvent(new CustomEvent('voltcharge-voice-feedback', { detail: 'error' })); } catch (e) { void e; }
     };
 
     recognition.onend = () => {
+      recognitionRunning.current = false;
       // Auto-restart if still in state
       if (recognitionRef.current) {
-        try { recognition.start(); } catch (e) { void e; }
+        try {
+          if (!recognitionRunning.current) {
+            recognition.start();
+            recognitionRunning.current = true;
+          }
+        } catch (e) {
+          void e;
+          recognitionRunning.current = false;
+        }
       }
     };
 
     try {
-      recognition.start();
-      recognitionRef.current = recognition;
-      setMicActive(true);
-      try { window.dispatchEvent(new CustomEvent('voltcharge-voice-feedback', { detail: 'listening' })); } catch (e) { void e; }
+      if (!recognitionRunning.current) {
+        recognition.start();
+        recognitionRunning.current = true;
+        recognitionRef.current = recognition;
+        setMicActive(true);
+        try { window.dispatchEvent(new CustomEvent('voltcharge-voice-feedback', { detail: 'listening' })); } catch (e) { void e; }
+      }
     } catch (e) {
       setMicActive(false);
+      recognitionRunning.current = false;
     }
   }
 
   function stopListening() {
     if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch (e) { void e; }
+      try {
+        recognitionRef.current.stop();
+        recognitionRunning.current = false;
+      } catch (e) { void e; }
       recognitionRef.current = null;
     }
     setMicActive(false);
+    recognitionRunning.current = false;
   }
 
   return { micActive, startListening, stopListening };
