@@ -24,7 +24,7 @@ const FirstTimeTutorial = ({ commandHandlerRef }) => {
 
         const timer = setTimeout(() => {
             speak(
-                "Say play to start the video. Say pause to stop the video. Say continue to proceed to authentication.",
+                "Watch the quick guide then tap or say continue to move authentication",
                 () => {
                     // Autoplay after speech
                     if (videoRef.current) {
@@ -38,7 +38,7 @@ const FirstTimeTutorial = ({ commandHandlerRef }) => {
                                     }
                                 }, 800);
                             })
-                            .catch(() => {});
+                            .catch(() => { });
                     }
                 }
             );
@@ -55,7 +55,7 @@ const FirstTimeTutorial = ({ commandHandlerRef }) => {
             const command = (transcript || '').toLowerCase();
 
             if (command.includes('play')) {
-                videoRef.current?.play().catch(() => {});
+                videoRef.current?.play().catch(() => { });
                 setIsPlaying(true);
             }
 
@@ -69,7 +69,7 @@ const FirstTimeTutorial = ({ commandHandlerRef }) => {
             }
         };
 
-        return () => {};
+        return () => { };
     }, [navigate, commandHandlerRef]);
 
     const handleContinue = () => {
@@ -84,7 +84,7 @@ const FirstTimeTutorial = ({ commandHandlerRef }) => {
 
     const handlePlayOverlay = () => {
         if (videoRef.current) {
-            videoRef.current.play().catch(() => {});
+            videoRef.current.play().catch(() => { });
             setIsPlaying(true);
         }
     };

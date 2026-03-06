@@ -236,11 +236,11 @@ const HomeScreen = ({ onNext, decideUserMode, userMode, incrementHelp }) => {
         </div>
         <motion.h1
           initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-          className={`font-bold font-sans text-glow mb-2 ${userMode === 'ELDERLY' ? 'text-4xl' : (userMode === 'GUIDED' ? 'text-3xl' : 'text-2xl')}`}
+          className={`font-bold font-sans text-glow mb-4 ${userMode === 'ELDERLY' ? 'text-4xl' : (userMode === 'GUIDED' ? 'text-5xl' : 'text-2xl')}`}
         >
           EV Charging Station
         </motion.h1>
-        <p className={`${userMode === 'ELDERLY' ? 'text-xl' : (userMode === 'GUIDED' ? 'text-lg' : 'text-base')} text-slate-400`}>Fast, Safe, and Sustainable Charging</p>
+        <p className={`${userMode === 'ELDERLY' ? 'text-xl' : (userMode === 'GUIDED' ? 'text-2xl font-semibold' : 'text-base')} text-slate-400`}>Fast, Safe, and Sustainable Charging</p>
       </div>
 
       {/* Main Question Section */}
@@ -249,7 +249,7 @@ const HomeScreen = ({ onNext, decideUserMode, userMode, incrementHelp }) => {
           initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
           className="max-w-2xl text-center"
         >
-          <h2 className={`font-bold font-sans mb-12 ${userMode === 'ELDERLY' ? 'text-3xl' : (userMode === 'GUIDED' ? 'text-2xl' : 'text-xl')}`}>
+          <h2 className={`font-bold font-sans mb-16 ${userMode === 'ELDERLY' ? 'text-3xl' : (userMode === 'GUIDED' ? 'text-3xl font-bold' : 'text-xl')}`}>
             Is this your first time charging an EV?
           </h2>
 
@@ -278,7 +278,7 @@ const HomeScreen = ({ onNext, decideUserMode, userMode, incrementHelp }) => {
               animate={showInactivityHint ? { scale: [1, 1.05, 1], boxShadow: ["0 0 0px rgba(34,211,238,0)", "0 0 20px rgba(34,211,238,0.5)", "0 0 0px rgba(34,211,238,0)"] } : {}}
               transition={{ repeat: Infinity, duration: 2 }}
               onClick={handleYes}
-              className={`py-6 px-4 rounded-xl font-bold uppercase tracking-wider transition-all border-2 text-white bg-volt-green/20 border-volt-green hover:bg-volt-green/30 ${userMode === 'ELDERLY' ? 'py-8 text-2xl' : (userMode === 'GUIDED' ? 'py-6 text-lg' : 'py-4 text-base')}`}
+              className={`py-6 px-4 rounded-xl font-bold uppercase tracking-wider transition-all border-2 text-white bg-volt-green/20 border-volt-green hover:bg-volt-green/30 ${userMode === 'ELDERLY' ? 'py-8 text-2xl' : (userMode === 'GUIDED' ? 'py-10 text-xl' : 'py-4 text-base')}`}
             >
               ✅ Yes
             </motion.button>
@@ -287,7 +287,7 @@ const HomeScreen = ({ onNext, decideUserMode, userMode, incrementHelp }) => {
               animate={showInactivityHint ? { scale: [1, 1.05, 1], boxShadow: ["0 0 0px rgba(255,255,255,0)", "0 0 20px rgba(255,255,255,0.3)", "0 0 0px rgba(255,255,255,0)"] } : {}}
               transition={{ repeat: Infinity, duration: 2, delay: 0.5 }}
               onClick={handleNo}
-              className={`py-6 px-4 rounded-xl font-bold uppercase tracking-wider transition-all border-2 text-white bg-slate-700/30 border-slate-600 hover:bg-slate-700/50 ${userMode === 'ELDERLY' ? 'py-8 text-2xl' : (userMode === 'GUIDED' ? 'py-6 text-lg' : 'py-4 text-base')}`}
+              className={`py-6 px-4 rounded-xl font-bold uppercase tracking-wider transition-all border-2 text-white bg-slate-700/30 border-slate-600 hover:bg-slate-700/50 ${userMode === 'ELDERLY' ? 'py-8 text-2xl' : (userMode === 'GUIDED' ? 'py-10 text-xl' : 'py-4 text-base')}`}
             >
               ❌ No
             </motion.button>
@@ -314,7 +314,7 @@ const HomeScreen = ({ onNext, decideUserMode, userMode, incrementHelp }) => {
             <span>Voice: Say "Yes" or "No"</span>
           </div>
         )}
-        <select className="px-3 py-1 bg-transparent border rounded border-slate-600 text-slate-300">
+        <select className={`px-4 py-2 bg-transparent border rounded border-slate-600 text-slate-300 ${userMode === 'GUIDED' ? 'text-lg' : 'text-sm'}`}>
           <option>English</option>
           <option>Español</option>
           <option>Français</option>
@@ -348,9 +348,9 @@ const ChargingModeScreen = ({ onFastCharge, onNormalCharge, userMode }) => {
   const modeClasses = userMode === 'ELDERLY' ? 'text-2xl high-contrast' : (userMode === 'GUIDED' ? 'text-xl' : (userMode === 'EXPERT' ? 'text-sm compact-layout' : ''));
   return (
     <div className={`flex flex-col h-full justify-center px-4 max-w-5xl mx-auto w-full ${modeClasses}`}>
-      <div className="mb-16 text-center">
-        <h2 className="mb-2 font-sans text-4xl font-bold text-glow">Select Charging Mode</h2>
-        <p className="text-slate-400">Choose your preferred charging speed</p>
+      <div className={`${userMode === 'GUIDED' ? 'mb-20' : 'mb-16'} text-center`}>
+        <h2 className={`mb-4 font-sans font-bold text-glow ${userMode === 'GUIDED' ? 'text-5xl' : 'text-4xl'}`}>Select Charging Mode</h2>
+        <p className={`${userMode === 'GUIDED' ? 'text-2xl' : 'text-lg'} text-slate-400`}>Choose your preferred charging speed</p>
       </div>
 
       <div className="grid items-stretch grid-cols-1 gap-8 md:grid-cols-2">
@@ -363,23 +363,25 @@ const ChargingModeScreen = ({ onFastCharge, onNormalCharge, userMode }) => {
           <div className="absolute w-8 h-8 border-2 rounded-full top-4 right-4 border-cyan-400 bg-cyan-400/10"></div>
 
           <div className="mb-6 text-6xl">⚡</div>
-          <h3 className="mb-2 text-3xl font-bold text-cyan-400">Fast Charge</h3>
-          <p className="mb-6 text-lg text-slate-400">High-speed charging</p>
+          <h3 className={`mb-3 font-bold text-cyan-400 ${userMode === 'GUIDED' ? 'text-4xl' : 'text-3xl'}`}>Fast Charge</h3>
+          <p className={`mb-6 text-slate-400 ${userMode === 'GUIDED' ? 'text-xl' : 'text-lg'}`}>High-speed charging</p>
 
-          <div className="space-y-3 text-sm text-slate-300">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-cyan-400">⚡</span>
-              <span>0-80% in ~25 minutes</span>
+          {userMode === 'EXPERT' && (
+            <div className="space-y-3 text-sm text-slate-300">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-cyan-400">⚡</span>
+                <span>0-80% in ~25 minutes</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-cyan-400">⚡</span>
+                <span>150 kW max power</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-cyan-400">⚡</span>
+                <span>Ideal for quick trips</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-cyan-400">⚡</span>
-              <span>150 kW max power</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-cyan-400">⚡</span>
-              <span>Ideal for quick trips</span>
-            </div>
-          </div>
+          )}
         </motion.div>
 
         {/* NORMAL CHARGE CARD */}
@@ -391,23 +393,25 @@ const ChargingModeScreen = ({ onFastCharge, onNormalCharge, userMode }) => {
           <div className="absolute w-8 h-8 border-2 border-green-500 rounded-full top-4 right-4 bg-green-500/10"></div>
 
           <div className="mb-6 text-6xl">🔋</div>
-          <h3 className="mb-2 text-3xl font-bold text-green-500">Normal Charge</h3>
-          <p className="mb-6 text-lg text-slate-400">Balanced charging mode</p>
+          <h3 className={`mb-3 font-bold text-green-500 ${userMode === 'GUIDED' ? 'text-4xl' : 'text-3xl'}`}>Normal Charge</h3>
+          <p className={`mb-6 text-slate-400 ${userMode === 'GUIDED' ? 'text-xl' : 'text-lg'}`}>Balanced charging mode</p>
 
-          <div className="space-y-3 text-sm text-slate-300">
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-green-500">✓</span>
-              <span>Optimized for battery health</span>
+          {userMode === 'EXPERT' && (
+            <div className="space-y-3 text-sm text-slate-300">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-green-500">✓</span>
+                <span>Optimized for battery health</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-green-500">✓</span>
+                <span>50 kW balanced power</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-green-500">✓</span>
+                <span>Extended battery lifespan</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-green-500">✓</span>
-              <span>50 kW balanced power</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-green-500">✓</span>
-              <span>Extended battery lifespan</span>
-            </div>
-          </div>
+          )}
         </motion.div>
       </div>
     </div>
@@ -500,8 +504,8 @@ const CableConnectionScreen = ({ onNext, userMode }) => {
     }, 2000);
   };
 
-  const modeClasses = userMode === 'ELDERLY' ? 'text-2xl high-contrast' : (userMode === 'GUIDED' ? 'text-xl' : 'text-sm');
-  const titleSize = userMode === 'ELDERLY' ? 'text-4xl' : (userMode === 'GUIDED' ? 'text-3xl' : 'text-2xl');
+  const modeClasses = userMode === 'ELDERLY' ? 'text-2xl high-contrast' : (userMode === 'GUIDED' ? 'text-2xl' : 'text-sm');
+  const titleSize = userMode === 'ELDERLY' ? 'text-4xl' : (userMode === 'GUIDED' ? 'text-5xl font-bold' : 'text-2xl');
 
   if (checking) {
     return (
@@ -511,10 +515,10 @@ const CableConnectionScreen = ({ onNext, userMode }) => {
           transition={{ duration: 2, repeat: Infinity }}
           className="w-16 h-16 mb-6 border-4 rounded-full border-volt-cyan border-t-transparent"
         />
-        <h2 className={`font-bold font-sans text-glow mb-2 ${titleSize}`}>
+        <h2 className={`font-bold font-sans text-glow mb-4 ${userMode === 'GUIDED' ? 'text-5xl' : titleSize}`}>
           Detecting Cable...
         </h2>
-        <p className={`text-slate-400 ${userMode === 'ELDERLY' ? 'text-xl' : 'text-base'}`}>
+        <p className={`text-slate-400 ${userMode === 'ELDERLY' ? 'text-xl' : (userMode === 'GUIDED' ? 'text-2xl' : 'text-base')}`}>
           Please insert your charging cable
         </p>
       </div>
@@ -530,18 +534,18 @@ const CableConnectionScreen = ({ onNext, userMode }) => {
         </h2>
       </div>
 
-      <Card className={`flex flex-col items-center justify-center mb-8 ${userMode === 'ELDERLY' ? 'p-12 min-h-[300px]' : 'p-8 min-h-[250px]'}`}>
+      <Card className={`flex flex-col items-center justify-center mb-8 ${userMode === 'ELDERLY' ? 'p-12 min-h-[300px]' : (userMode === 'GUIDED' ? 'p-16 min-h-[350px]' : 'p-8 min-h-[250px]')}`}>
         <motion.div
           animate={connected ? { scale: [1, 1.2, 1] } : { y: [0, 10, 0] }}
           transition={{ duration: 1, repeat: Infinity }}
-          className={`${userMode === 'ELDERLY' ? 'text-8xl' : 'text-6xl'} mb-6`}
+          className={`${(userMode === 'ELDERLY' || userMode === 'GUIDED') ? 'text-8xl' : 'text-6xl'} mb-8`}
         >
           {connected ? '✅' : '🔌'}
         </motion.div>
-        <h3 className={`font-bold mb-2 ${userMode === 'ELDERLY' ? 'text-2xl' : 'text-lg'}`}>
+        <h3 className={`font-bold mb-4 ${(userMode === 'ELDERLY' || userMode === 'GUIDED') ? 'text-3xl' : 'text-lg'}`}>
           {connected ? 'Cable Connected' : 'Waiting for Cable'}
         </h3>
-        <p className={`text-slate-400 text-center ${userMode === 'ELDERLY' ? 'text-lg' : 'text-sm'}`}>
+        <p className={`text-slate-400 text-center ${(userMode === 'ELDERLY' || userMode === 'GUIDED') ? 'text-xl' : 'text-sm'}`}>
           {connected ? 'Ready to start charging' : 'Insert cable into charging port'}
         </p>
       </Card>
@@ -552,9 +556,9 @@ const CableConnectionScreen = ({ onNext, userMode }) => {
         </div>
       )}
 
-      <div className="space-y-3">
+      <div className={`${userMode === 'GUIDED' ? 'space-y-6' : 'space-y-3'}`}>
         {!connected && (
-          <Button onClick={handleRetry} variant="secondary" className={userMode === 'ELDERLY' ? 'py-6 text-2xl' : ''}>
+          <Button onClick={handleRetry} variant="secondary" className={`${userMode === 'ELDERLY' ? 'py-6 text-2xl' : (userMode === 'GUIDED' ? 'py-8 text-2xl' : '')}`}>
             Retry Detection
           </Button>
         )}
@@ -562,7 +566,7 @@ const CableConnectionScreen = ({ onNext, userMode }) => {
           onClick={handleContinue}
           variant="primary"
           disabled={!connected}
-          className={userMode === 'ELDERLY' ? 'py-6 text-2xl' : ''}
+          className={`${userMode === 'ELDERLY' ? 'py-6 text-2xl' : (userMode === 'GUIDED' ? 'py-8 text-2xl' : '')}`}
         >
           Continue
         </Button>
@@ -933,7 +937,7 @@ const ChargingScreen = ({ onComplete, onError, mode = 'normal', userMode = 'STAN
             <div className={`uppercase tracking-tighter text-[10px] font-bold ${mode === 'fast' ? 'text-cyan-400' : 'text-green-500'} mb-1`}>
               {mode === 'fast' ? 'Fast Charging Enabled' : 'Normal Charging Enabled'}
             </div>
-            <span className={`uppercase tracking-widest text-volt-cyan ${userMode === 'ELDERLY' ? 'text-lg' : (userMode === 'EXPERT' ? 'text-xs' : 'text-sm')} animate-pulse`}>
+            <span className={`uppercase tracking-widest text-volt-cyan ${userMode === 'ELDERLY' ? 'text-lg' : (userMode === 'EXPERT' ? 'text-xs' : (userMode === 'GUIDED' ? 'text-xl' : 'text-sm'))} animate-pulse`}>
               {userMode === 'GUIDED' ? 'Charging...' : (userMode === 'ELDERLY' ? 'CHARGING IN PROGRESS' : 'Charging')}
             </span>
           </div>
@@ -956,29 +960,31 @@ const ChargingScreen = ({ onComplete, onError, mode = 'normal', userMode = 'STAN
             <div className={`w-full max-w-xl ${userMode === 'ELDERLY' ? 'h-4' : 'h-2'} bg-slate-800 rounded-full ${userMode === 'ELDERLY' ? 'mb-4' : 'mb-2'} overflow-hidden`}>
               <div className="h-full bg-volt-cyan" style={{ width: `${progress}%` }}></div>
             </div>
-            <div className={`w-full max-w-xl flex justify-between text-slate-500 ${userMode === 'ELDERLY' ? 'text-lg mb-16' : 'text-xs mb-12'}`}>
+            <div className={`w-full max-w-xl flex justify-between text-slate-500 ${userMode === 'ELDERLY' ? 'text-lg mb-16' : (userMode === 'GUIDED' ? 'text-xl mb-16' : 'text-xs mb-12')}`}>
               <span>Battery Level</span>
-              <span>{Math.floor(progress)} / 100 kWh</span>
+              <span>{Math.floor(progress)}{userMode !== 'GUIDED' && ' / 100 kWh'}</span>
             </div>
           </>
         )}
 
         {/* Stats Grid */}
-        <div className="grid w-full grid-cols-3 gap-4 mb-8">
-          <Card className="flex flex-col items-center py-4">
-            <Clock size={20} className="mb-2 text-volt-cyan" />
-            <span className="font-mono text-xl font-bold">{Math.max(0, Math.floor((100 - progress) * 0.5))} min</span>
-            <span className="text-[10px] text-slate-500 uppercase">Remaining</span>
+        <div className={`grid w-full ${userMode === 'GUIDED' ? 'grid-cols-2' : 'grid-cols-3'} gap-6 mb-8`}>
+          <Card className={`flex flex-col items-center ${userMode === 'GUIDED' ? 'py-8' : 'py-4'}`}>
+            <Clock size={userMode === 'GUIDED' ? 28 : 20} className="mb-2 text-volt-cyan" />
+            <span className={`font-mono font-bold ${userMode === 'GUIDED' ? 'text-3xl' : 'text-xl'}`}>{Math.max(0, Math.floor((100 - progress) * 0.5))} min</span>
+            <span className={`${userMode === 'GUIDED' ? 'text-xs' : 'text-[10px]'} text-slate-500 uppercase`}>Remaining</span>
           </Card>
-          <Card className="flex flex-col items-center py-4">
-            <Zap size={20} className="mb-2 text-volt-green" />
-            <span className="font-mono text-xl font-bold">{mode === 'fast' ? '150' : '50'} kW</span>
-            <span className="text-[10px] text-slate-500 uppercase">Power</span>
-          </Card>
-          <Card className="flex flex-col items-center py-4">
-            <span className="text-lg font-bold text-volt-cyan">$</span>
-            <span className="font-mono text-xl font-bold">{(progress * 0.45).toFixed(2)}</span>
-            <span className="text-[10px] text-slate-500 uppercase">Cost</span>
+          {userMode === 'EXPERT' && (
+            <Card className="flex flex-col items-center py-4">
+              <Zap size={20} className="mb-2 text-volt-green" />
+              <span className="font-mono text-xl font-bold">{mode === 'fast' ? '150' : '50'} kW</span>
+              <span className="text-[10px] text-slate-500 uppercase">Power</span>
+            </Card>
+          )}
+          <Card className={`flex flex-col items-center ${userMode === 'GUIDED' ? 'py-8' : 'py-4'}`}>
+            <span className={`font-bold text-volt-cyan ${userMode === 'GUIDED' ? 'text-2xl' : 'text-lg'}`}>$</span>
+            <span className={`font-mono font-bold ${userMode === 'GUIDED' ? 'text-3xl' : 'text-xl'}`}>{(progress * 0.45).toFixed(2)}</span>
+            <span className={`${userMode === 'GUIDED' ? 'text-xs' : 'text-[10px]'} text-slate-500 uppercase`}>Cost</span>
           </Card>
         </div>
 
@@ -1061,7 +1067,7 @@ const ChargingScreen = ({ onComplete, onError, mode = 'normal', userMode = 'STAN
               }
             }
           }}
-          className={`w-full max-w-md ${userMode === 'ELDERLY' ? 'py-6 text-3xl' : (userMode === 'GUIDED' ? 'py-6 text-2xl' : 'py-6 text-2xl')}`}
+          className={`w-full max-w-md ${userMode === 'ELDERLY' ? 'py-6 text-3xl' : (userMode === 'GUIDED' ? 'py-8 text-3xl' : 'py-6 text-2xl')}`}
           disabled={childLockEnabled}
         >
           {userMode === 'ELDERLY' ? '🛑 STOP' : 'STOP CHARGING'}
@@ -1408,9 +1414,9 @@ const PaymentScreen = ({ onHome, userMode }) => {
     } catch (e) { void e; }
   }, []);
 
-  const titleSize = userMode === 'ELDERLY' ? 'text-5xl' : (userMode === 'GUIDED' ? 'text-4xl' : 'text-3xl');
-  const textSize = userMode === 'ELDERLY' ? 'text-2xl' : (userMode === 'GUIDED' ? 'text-lg' : 'text-base');
-  const spacing = userMode === 'ELDERLY' ? 'gap-8' : (userMode === 'GUIDED' ? 'gap-6' : 'gap-4');
+  const titleSize = userMode === 'ELDERLY' ? 'text-5xl' : (userMode === 'GUIDED' ? 'text-5xl font-bold' : 'text-3xl');
+  const textSize = userMode === 'ELDERLY' ? 'text-2xl' : (userMode === 'GUIDED' ? 'text-2xl font-semibold' : 'text-base');
+  const spacing = userMode === 'ELDERLY' ? 'gap-8' : (userMode === 'GUIDED' ? 'gap-10' : 'gap-4');
 
   return (
     <div className={`flex flex-col h-full items-center justify-center max-w-2xl mx-auto w-full text-center ${spacing}`}>
@@ -1430,35 +1436,37 @@ const PaymentScreen = ({ onHome, userMode }) => {
         <p className={`text-volt-green font-semibold ${textSize}`}>Payment Successful</p>
       </div>
 
-      <Card className={`w-full ${userMode === 'ELDERLY' ? 'p-8' : (userMode === 'GUIDED' ? 'p-6' : 'p-4')}`}>
-        <div className={`flex justify-between ${userMode === 'ELDERLY' ? 'py-4 text-2xl' : (userMode === 'GUIDED' ? 'py-3 text-lg' : 'py-2')} border-b border-white/10`}>
-          <span className="text-slate-400">Total Energy</span>
-          <span className="font-mono font-bold">42.5 kWh</span>
-        </div>
-        <div className={`flex justify-between ${userMode === 'ELDERLY' ? 'py-4 text-2xl' : (userMode === 'GUIDED' ? 'py-3 text-lg' : 'py-2')} border-b border-white/10`}>
+      <Card className={`w-full ${userMode === 'ELDERLY' ? 'p-8' : (userMode === 'GUIDED' ? 'p-10' : 'p-4')}`}>
+        {userMode === 'EXPERT' && (
+          <div className={`flex justify-between ${userMode === 'ELDERLY' ? 'py-4 text-2xl' : (userMode === 'GUIDED' ? 'py-6 text-2xl' : 'py-2')} border-b border-white/10`}>
+            <span className="text-slate-400">Total Energy</span>
+            <span className="font-mono font-bold">42.5 kWh</span>
+          </div>
+        )}
+        <div className={`flex justify-between ${userMode === 'ELDERLY' ? 'py-4 text-2xl' : (userMode === 'GUIDED' ? 'py-6 text-2xl' : 'py-2')} border-b border-white/10`}>
           <span className="text-slate-400">Duration</span>
           <span className="font-mono font-bold">35 min</span>
         </div>
-        <div className={`flex justify-between ${userMode === 'ELDERLY' ? 'py-6 text-4xl' : (userMode === 'GUIDED' ? 'py-4 text-2xl' : 'py-3 text-xl')} text-volt-cyan font-bold`}>
+        <div className={`flex justify-between ${userMode === 'ELDERLY' ? 'py-6 text-4xl' : (userMode === 'GUIDED' ? 'py-8 text-4xl' : 'py-3 text-xl')} text-volt-cyan font-bold`}>
           <span>Total Paid</span>
           <span>$19.12</span>
         </div>
       </Card>
 
-      <div className={`flex gap-4 w-full max-w-md flex-col md:flex-row ${userMode === 'ELDERLY' ? 'gap-6' : ''}`}>
+      <div className={`flex gap-6 w-full max-w-2xl flex-col md:flex-row ${userMode === 'ELDERLY' ? 'gap-6' : ''}`}>
         <Button
           onClick={downloadReceipt}
           variant="primary"
-          className={`flex-1 ${userMode === 'ELDERLY' ? 'py-6 text-xl' : (userMode === 'GUIDED' ? 'py-5 text-lg' : '')}`}
+          className={`flex-1 ${userMode === 'ELDERLY' ? 'py-6 text-xl' : (userMode === 'GUIDED' ? 'py-8 text-2xl' : '')}`}
         >
-          {userMode === 'ELDERLY' ? '📄 RECEIPT' : 'Download Receipt'}
+          {userMode === 'ELDERLY' ? '📄 RECEIPT' : (userMode === 'GUIDED' ? 'Download Receipt' : 'Download Receipt')}
         </Button>
         <Button
           onClick={onHome}
           variant="secondary"
-          className={`flex-1 ${userMode === 'ELDERLY' ? 'py-6 text-xl' : (userMode === 'GUIDED' ? 'py-5 text-lg' : '')}`}
+          className={`flex-1 ${userMode === 'ELDERLY' ? 'py-6 text-xl' : (userMode === 'GUIDED' ? 'py-8 text-2xl' : '')}`}
         >
-          {userMode === 'ELDERLY' ? '🏠 HOME' : 'Return Home'}
+          {userMode === 'ELDERLY' ? '🏠 HOME' : (userMode === 'GUIDED' ? 'Return Home' : 'Return Home')}
         </Button>
       </div>
 
