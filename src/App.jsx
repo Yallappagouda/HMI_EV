@@ -1692,14 +1692,22 @@ export default function App() {
   // --- SAFE START (no double start) ---
   const safeStart = useCallback(() => {
     const recognition = recognitionRef.current;
-    if (!recognition || hasStartedRef.current || micPausedRef.current) return;
+    if (!recognition || hasStartedRef.current || micPausedRef.current) {
+      console.log("SafeStart skipped:", {
+        noRec: !recognition,
+        alreadyStarted: hasStartedRef.current,
+        micPaused: micPausedRef.current
+      });
+      return;
+    }
 
     try {
       recognition.start();
       hasStartedRef.current = true;
-      console.log("Global voice recognition STARTED");
+      console.log("Global voice recognition STARTED successfully");
     } catch (e) {
-      console.warn("Start prevented:", e);
+      console.warn("Start attempt failed or prevented:", e.message);
+      // If we failed to start, ensure flag is reset so we can try again
       hasStartedRef.current = false;
     }
   }, []);
@@ -1813,10 +1821,13 @@ export default function App() {
       }
     };
     const resumeMic = () => {
-      micPausedRef.current = false;
-      hasStartedRef.current = false; // Force safeStart to actually start
       console.log("Mic resume requested via event");
-      safeStart();
+      micPausedRef.current = false;
+      // hasStartedRef.current is usually false here if rec.stop() was called
+      // but we force it to ensure safeStart doesn't block if state got desynced
+      setTimeout(() => {
+        safeStart();
+      }, 100);
     };
     window.addEventListener('voltcharge-pause-mic', pauseMic);
     window.addEventListener('voltcharge-resume-mic', resumeMic);

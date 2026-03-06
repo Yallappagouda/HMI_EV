@@ -15,10 +15,13 @@ export const stopSpeaking = () => {
 export const speak = (text, onEndCallback = null) => {
   if (!window.speechSynthesis) return;
 
+  // Signal start to other components
   try { window.dispatchEvent(new Event("voltcharge-speaking-start")); } catch (e) { void e; }
+  // Explicitly pause microphone before starting speech
   try { window.dispatchEvent(new Event("voltcharge-pause-mic")); } catch (e) { void e; }
   try { window.isSystemSpeaking = true; } catch (e) { void e; }
 
+  // Cancel any ongoing speech to avoid overlaps
   window.speechSynthesis.cancel();
 
   const utterance = new SpeechSynthesisUtterance(text);
@@ -26,13 +29,22 @@ export const speak = (text, onEndCallback = null) => {
   utterance.pitch = 1;
   utterance.volume = 1;
 
-  utterance.onend = () => {
+  const handleEnd = () => {
     try {
-      try { window.isSystemSpeaking = false; } catch (e) { void e; }
-      try { window.dispatchEvent(new Event("voltcharge-speaking-end")); } catch (e) { void e; }
-      try { window.dispatchEvent(new Event("voltcharge-resume-mic")); } catch (e) { void e; }
+      window.isSystemSpeaking = false;
+      window.dispatchEvent(new Event("voltcharge-speaking-end"));
+      // Crucial: Resume microphone after speech completes or fails
+      window.dispatchEvent(new Event("voltcharge-resume-mic"));
       if (onEndCallback) onEndCallback();
-    } catch (e) { void e; }
+    } catch (e) {
+      console.error("Error in speech end handler:", e);
+    }
+  };
+
+  utterance.onend = handleEnd;
+  utterance.onerror = (event) => {
+    console.warn("Speech synthesis error:", event);
+    handleEnd();
   };
 
   window.speechSynthesis.speak(utterance);
